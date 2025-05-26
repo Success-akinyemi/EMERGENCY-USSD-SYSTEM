@@ -48,7 +48,7 @@ export async function logout(formData){
 
 export async function updateHospital(formData){
     try {
-        const res = await axios.post('/category/createCategory', formData, 
+        const res = await axios.post('/hospital/auth/updateHospital', formData, 
             {
                 withCredentials: true,
                 headers: { "Content-Type": "multipart/form-data" }

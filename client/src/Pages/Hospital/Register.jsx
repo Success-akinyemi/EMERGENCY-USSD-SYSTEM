@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { register } from '../../Helpers/apis/hospital/apis'
 import LoadingBtn from '../../Components/Helpers/LoadingBtn'
+import { useFetchState } from '../../Helpers/apis/fetch'
 
 function Register() {
     const [ formData, setFormData ] = useState({})
@@ -15,6 +16,8 @@ function Register() {
     const [ loading, setLoading ] = useState(false)
 
     const navigate = useNavigate()
+    const { data: stateData, isFetching: isFetchingStates } = useFetchState()
+
 
     const handleChange = (e) => {
         setFormData({
@@ -127,9 +130,30 @@ function Register() {
             </div>
 
             <div className="inputGroup mt-3 flex-col items-start justify-start gap-1">
-                <label className='label text-green-500'>State:</label>
                 <div className="w-full mt-[-2px]">
+                    {
+                        isFetchingStates ? (
+                            <p className="">Loading States...</p>
+                        ): (
+                            <div className="inputGroup mt-3 flex-col items-start justify-start gap-[-8px]">
+                                <label className='label text-green-500'>State</label>
+                                <div className="w-full mt-[-2px]">
+                                    <select name="state" id="state" onChange={handleChange} className="input border-b-gray-300 focus:border-b-dark-blue">
+                                        <option value="">Select State</option>
+                                        {
+                                            stateData?.data?.map((item, idx) => (
+                                                <option key={idx} value={item.state} >{item.state}</option>
+                                            ))
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        )
+                    }
+                    {/**
+                     * 
                     <InputField placeholder={'Enter State'} id={'state'} onChange={handleChange} type={'text'} />
+                     */}
                 </div>
             </div>
 

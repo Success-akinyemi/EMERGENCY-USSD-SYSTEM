@@ -300,12 +300,12 @@ export async function updateHospital(req, res) {
         if(address) hospital.address = address
         if(state) hospital.state = state
         if(city) hospital.city = city
-        if(country) hospital.country = country
+        //if(country) hospital.country = country
         if(lat && lng) hospital.location = location
         if(quickResponseMessage) hospital.quickResponseMessage = quickResponseMessage
         if(profileImgUrl) hospital.profileImg = profileImg
 
-        const { password: _, ...hospitalData } = hospital._doc;
+        const { password: _, blocked, verified, accountSuspended, noOfLoginAttempts, temporaryAccountBlockTime, ...hospitalData } = hospital._doc;
         sendResponse(res, 200, true, hospitalData, 'Hospital updated')
     } catch (error) {
         console.log('ERROR UPDATING HOSPITAL:', error);

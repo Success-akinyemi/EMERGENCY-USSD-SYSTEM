@@ -9,7 +9,7 @@ function Sidebar() {
     const pathName = loc.pathname.split('/')[2]    
 
   return (
-    <div className='w-full h-[100vh] bg-light-blue bg py-[24px] px-[18px]'>
+    <div className='fixed top-0 left-0 w-[20%] w-full h-[100vh] bg-light-blue bg py-[24px] px-[18px]'>
         <div className="flex flex-col items-center justify-center w-full">
             <div className="flex flex-col items-center justify-center gap-2">
                 <img src={admin?.profileImg} alt={admin?.name} className='h-[60px] w-[60px] rounded-full border-[2px] border-dark-blue' />

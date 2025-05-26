@@ -476,7 +476,7 @@ export async function ussd(req, res) {
     // EMERGENCY ALERT FLOW
     else if (levels[0] === '1') {
         const accidentTypes = ['Snake bite', 'Road Accident', 'Fire Accident', 'Water Accident', 'Others'];
-        const allStates = await StateModel.find({}).select('state cities').lean();
+        const allStates = await StateModel.find({ active: true }).select('state cities').lean();
         const stateNames = allStates.map(s => s.state);
         const getPaged = (list, page) => list.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
