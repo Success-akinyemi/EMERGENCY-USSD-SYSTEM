@@ -60,7 +60,8 @@ const allowedOrigins = [
 
     process.env.CLIENT_TWO_URL
 ];
-
+/**
+ * 
 const corsOptions = {
     origin: function (origin, callback) {
         console.log('URL ORIGIN', origin);
@@ -75,19 +76,35 @@ const corsOptions = {
     credentials: true,
 };
 app.use(cors(corsOptions));
-//for ios
-/**
- * 
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Origin', req.headers.origin); // echo origin
-  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE');
-  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
-  next();
-});
  */
 
-//app.options('/*', cors(corsOptions));
+// Enable credentials and specific origin handling
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
+
+// Replace existing CORS middleware with:
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use((req, res, next) => {
+  res.header('Content-Security-Policy', "default-src 'self'");
+  res.header('X-Content-Type-Options', 'nosniff');
+  res.header('X-Frame-Options', 'DENY');
+  res.header('X-XSS-Protection', '1; mode=block');
+  next();
+});
 
 
 // Add Morgan middleware to log HTTP requests

@@ -202,14 +202,20 @@ export async function login(req, res) {
             httpOnly: true,
             sameSite: 'None',
             secure: true,
+            domain: process.env.BUILD_MODE === 'PROD' ? `${process.env.ADMIN_URL}` : undefined,
+            path: '/',
             maxAge: 15 * 60 * 1000, // 15 minutes
         });
         res.cookie('hospitalauthid', hospital?.hospitalId, {
             httpOnly: true,
             sameSite: 'None',
             secure: true,
+            domain: process.env.BUILD_MODE === 'PROD' ? `${process.env.ADMIN_URL}` : undefined,
+            path: '/',
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         });
+        res.header('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+        res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
 
         // Send success response
         const { password: _, blocked, verified, accountSuspended, noOfLoginAttempts, temporaryAccountBlockTime, ...hospitalData } = hospital._doc;
