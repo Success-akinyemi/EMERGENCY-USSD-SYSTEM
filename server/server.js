@@ -72,6 +72,7 @@ const corsOptions = {
     credentials: true,
 };
 app.use(cors(corsOptions));
+//for ios
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Origin', req.headers.origin); // echo origin
@@ -80,7 +81,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.options('*', cors(corsOptions));
+//app.options('/*', cors(corsOptions));
 
 
 // Add Morgan middleware to log HTTP requests
