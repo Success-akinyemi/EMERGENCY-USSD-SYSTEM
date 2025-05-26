@@ -19,12 +19,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
+/**
+ * 
 app.use(session({
   secret: process.env.EXPRESS_SESSION_KEY,
   resave: false,
   saveUninitialized: true,
   cookie: { secure: false }
 }));
+ */
 
 //DB
 import './connection/db.js';
