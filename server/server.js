@@ -76,6 +76,8 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 //for ios
+/**
+ * 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Origin', req.headers.origin); // echo origin
@@ -83,6 +85,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
   next();
 });
+ */
 
 //app.options('/*', cors(corsOptions));
 
