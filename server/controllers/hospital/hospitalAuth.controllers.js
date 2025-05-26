@@ -202,7 +202,7 @@ export async function login(req, res) {
             httpOnly: true,
             sameSite: 'None',
             secure: true,
-            domain: process.env.BUILD_MODE === 'PROD' ? `${process.env.ADMIN_URL}` : undefined,
+            domain: process.env.BUILD_MODE === 'PROD' ? `${process.env.DOMAIN_URL}` : undefined,
             path: '/',
             maxAge: 15 * 60 * 1000, // 15 minutes
         });
@@ -210,7 +210,7 @@ export async function login(req, res) {
             httpOnly: true,
             sameSite: 'None',
             secure: true,
-            domain: process.env.BUILD_MODE === 'PROD' ? `${process.env.ADMIN_URL}` : undefined,
+            domain: process.env.BUILD_MODE === 'PROD' ? `${process.env.DOMAIN_URL}` : undefined,
             path: '/',
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         });
