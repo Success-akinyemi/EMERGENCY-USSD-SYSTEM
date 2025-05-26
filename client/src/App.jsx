@@ -88,7 +88,7 @@ function App() {
           <Route path='/hospital/register' element={<Register />} />
           <Route path='/hospital/login' element={<Login />} />
             <Route element={<AuthorizeHospital />}>
-                <Route path='/hospital/dashboard' element={<Dashboard setSelectedCard={setSelectedCard} setUssdRequestData={setUssdRequestData} />} />
+                <Route path='/hospital/dashboard' element={<Dashboard setSelectedCard={setSelectedCard} setUssdRequestData={setUssdRequestData} setAppointmentId={setAppointmentId} />} />
             </Route>
             <Route element={<AuthorizeHospital />}>
                 <Route path='/hospital/emergencies' element={<Emergencies />} />

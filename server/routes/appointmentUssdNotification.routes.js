@@ -1,7 +1,7 @@
 import express from 'express'
-import * as controllers from '../../controllers/hospital/appointmentUssdNotification.controllers.js'
-import { uploadMiddleware } from '../../middlewares/utils.js'
-import { AuthenticateHospital, VerifyAccount } from '../../middlewares/auth/hospitalAuth.js'
+import * as controllers from '../controllers/appointmentUssdNotification.controllers.js'
+import { uploadMiddleware } from '../middlewares/utils.js'
+import { AuthenticateHospital, VerifyAccount } from '../middlewares/auth/hospitalAuth.js'
 
 const router = express.Router()
 

@@ -37,9 +37,7 @@ export async function login(formData){
 export async function logout(formData){
     try {
         const res = await axios.post('/hospital/auth/logout', formData, {withCredentials: true})
-        if(res.data.success){
-            return res.data
-        }
+        return res.data
     } catch (error) {
         const res = error.response.data || 'Unable to logout hosipital'
         return res

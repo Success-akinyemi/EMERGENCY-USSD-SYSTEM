@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import Sidebar from "../../Components/Hospital/Sidebar";
 import io from 'socket.io-client';
 import TopNotifications from "../../Components/Hospital/TopNotifications";
+import TopAppointments from "../../Components/Hospital/TopAppointments";
 
 const socket = io(`${import.meta.env.VITE_SOCKET_BASE_URL}/hospital`, {
   transports: ['websocket'],
@@ -12,7 +13,7 @@ socket.on('connect_error', (err) => {
   console.error('Socket connection error:', err.message);
 });
 
-function Dashboard({ setSelectedCard, setUssdRequestData }) {
+function Dashboard({ setSelectedCard, setUssdRequestData, setAppointmentId }) {
   useEffect(() => {
     const audio = new Audio('/notification1.wav');
 
@@ -55,6 +56,10 @@ function Dashboard({ setSelectedCard, setUssdRequestData }) {
       </div>
       <div className="w-[80%]">
         <TopNotifications />
+
+        <div className="mt-[-7rem]">
+            <TopAppointments setSelectedCard={setSelectedCard} setAppointmentId={setAppointmentId} />
+        </div>
       </div>
     </div>
   );

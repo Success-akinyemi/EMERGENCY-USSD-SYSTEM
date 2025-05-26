@@ -82,8 +82,8 @@ app.use(morgan('dev'));
 //ROUTES
 import UssdRoutes from './routes/ussd.routes.js'
 import HospitalAuthRoutes from './routes/hospital/hospitalAuth.routes.js'
-import EmergencyUssdNotificationRoutes from './routes/hospital/emergencyUssdNotification.routes.js'
-import AppointmentUssdNotificationRoutes from './routes/hospital/appointmentUssdNotification.routes.js'
+import EmergencyUssdNotificationRoutes from './routes/emergencyUssdNotification.routes.js'
+import AppointmentUssdNotificationRoutes from './routes/appointmentUssdNotification.routes.js'
 import HospitalRoutes from './routes/hospital/hospital.routes.js'
 import pushNotificationRoutes from './routes/pushNotification.routes.js'
 import StatesRoutes from './routes/states.routes.js'

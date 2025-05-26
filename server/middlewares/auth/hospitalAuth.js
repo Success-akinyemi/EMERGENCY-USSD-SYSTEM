@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 export const AuthenticateHospital = async (req, res, next) => {
     const accessToken = req.cookies.hospitaltoken;
     const accountId = req.cookies.hospitalauthid;
-
+    console.log('HOSPITAL AUTHENTICATE MIDDLEWARE', accessToken, accountId)
     try {
         if (accessToken) {
             try {
@@ -18,11 +18,11 @@ export const AuthenticateHospital = async (req, res, next) => {
                     hospital = await HospitalModel.findOne({ hospitalId: decoded.id });
                 }
                 if (!hospital) {
-                    console.log('VERIFICATION MIDDLEWARE 1')
+                    //console.log('VERIFICATION MIDDLEWARE 1')
                     return sendResponse(res, 404, false, null, 'User not found');
                 }
                 if (!refreshTokenExist) {
-                    console.log('VERIFICATION MIDDLEWARE 2')
+                    //console.log('VERIFICATION MIDDLEWARE 2')
                     return sendResponse(res, 401, false, null, 'UnAuthenicated');
                 }
                 req.hospital = hospital;
@@ -44,7 +44,7 @@ export const AuthenticateHospital = async (req, res, next) => {
                             return next();
                         }
                     }
-                    console.log('VERIFICATION MIDDLEWARE 3')
+                    //console.log('VERIFICATION MIDDLEWARE 3')
                     return sendResponse(res, 401, false, null, 'UnAuthenicated');
                 }
             }
@@ -63,7 +63,7 @@ export const AuthenticateHospital = async (req, res, next) => {
                 return next();
             }
         }
-        console.log('VERIFICATION MIDDLEWARE 4')
+        //console.log('VERIFICATION MIDDLEWARE 4')
         return sendResponse(res, 401, false, null, 'UnAuthenicated');
     } catch (error) {
         console.error('Authentication error:', error);

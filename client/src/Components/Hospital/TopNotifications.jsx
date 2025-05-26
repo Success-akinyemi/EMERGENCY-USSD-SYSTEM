@@ -101,7 +101,7 @@ function TopNotifications() {
     const formData = { hospitalId, notificationId }
     try {
         setMarking(true)
-        console.log('formData', formData)
+        //console.log('formData', formData)
         const res = await markNotificationAsRead(formData)
         if(res.success){
             toast.success(res.message)
@@ -110,7 +110,7 @@ function TopNotifications() {
             toast.error(res.message)
         }
     } catch (error) {
-        toast.error(`Unable to mark Notification ${notificationId} as read`)
+        toast.error(`Unable to mark Emergency ${notificationId} as read`)
     } finally {
         setMarking(false)
     }
@@ -125,7 +125,7 @@ function TopNotifications() {
 
     try {
         setAcceptingRequest(true)
-        console.log('formData', formData)
+        //console.log('formData', formData)
         const res = await acceptRequest(formData)
         if(res.success){
             toast.success(res.message)
@@ -135,7 +135,7 @@ function TopNotifications() {
         }
     } catch (error) {
         console.log('error', error)
-        toast.error(`Unable to accept Notification ${notificationId}`)
+        toast.error(`Unable to accept Emergency ${notificationId}`)
     } finally {
         setAcceptingRequest(false)
     }
@@ -150,7 +150,7 @@ function TopNotifications() {
 
     try {
         setRejectingRequest(true)
-        console.log('formData', formData)
+        //console.log('formData', formData)
         const res = await rejectRequest(formData)
         if(res.success){
             toast.success(res.message)
@@ -176,7 +176,7 @@ function TopNotifications() {
                   </div>
               ) : (
                   <div className="max-small-phone:px-2 max-phone:px-2 px-4">
-                      <h1 className="title text-[18px]">Recent Ussd Notifications</h1>
+                      <h1 className="title text-[18px]">Recent Emergencies</h1>
 
                       {/* Notification Table */}
                       <div className="overflow-x-auto">

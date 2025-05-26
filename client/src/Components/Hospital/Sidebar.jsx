@@ -1,12 +1,41 @@
-import { useSelector } from 'react-redux';
-import { Link, useLocation } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux';
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { menu } from '../../Data/Hospital/sidebar';
+import { useState } from 'react';
+import { logout } from '../../Helpers/apis/hospital/apis';
+import toast from 'react-hot-toast';
+import { signOut } from '../../Redux/hospital/hospitalSlice';
 
 function Sidebar() {
     const data  = useSelector((state) => state.hospital);
     const hospital = data?.currentUser
     const loc = useLocation()
     const pathName = loc.pathname.split('/')[2]    
+    const dispatch = useDispatch()
+    const navigate = useNavigate()
+
+    const [ logingOut, setLoggingOut ] = useState(false)
+    const handleLogout = async () => {
+        if(logingOut) return
+
+        try {
+            setLoggingOut(true)
+            const res = await logout()
+            if(res.success){
+                toast.success(res.message)
+                navigate('/hospital/login')
+                localStorage.removeItem('dmsquickresponse')
+                dispatch(signOut())
+            }else {
+                toast.error(res.message)
+            }
+        } catch (error) {
+            console.log('error', error)
+            toast.error(`Unable to logout`)
+        } finally {
+            setLoggingOut(false)
+        }
+  }
 
   return (
     <div className='fixed top-0 left-0 w-[20%] h-[100vh] bg-light-blue bg py-[24px] px-[18px]'>
@@ -24,6 +53,12 @@ function Sidebar() {
                         </Link>
                     ))
                 }
+            </div>
+
+            <div className="w-full">
+                <Link onClick={handleLogout} to="" className="w-full p-3 text-dark-blue font-semibold text-[18px] hover:bg-red-500 hover:text-white hover:rounded-[6px] transition-all duration-500">
+                    Logout
+                </Link>
             </div>
         </div>
     </div>

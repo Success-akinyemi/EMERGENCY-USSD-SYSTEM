@@ -11,7 +11,7 @@ router.post('/login', controllers.login)
 router.post('/resetPassword', controllers.resetPassword)
 router.post('/updateHospital', AuthenticateHospital, VerifyAccount, uploadMiddleware, controllers.updateHospital)
 router.post('/updatePassword', controllers.updatePassword)
-router.post('/logout', controllers.logout)
+router.post('/logout', AuthenticateHospital, controllers.logout)
 
 //GET
 router.get('/verifyToken', controllers.verifyToken)

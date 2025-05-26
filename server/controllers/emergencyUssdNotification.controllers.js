@@ -1,12 +1,77 @@
-import { sendResponse, sendSms } from '../../middlewares/utils.js';
-import UssdNotificationModel from '../../model/UssdNotification.js';
-import AppointmentUssdRequestModel from '../../model/AppointmentUssdRequest.js';
-import AdminUssdNotificationModel from '../../model/AdminUssdNotification.js';
+import { sendResponse, sendSms } from '../middlewares/utils.js';
+import UssdNotificationModel from '../model/UssdNotification.js';
+import EmergencyUssdRequestModel from '../model/EmergencyUssdRequest.js';
+import AdminUssdNotificationModel from '../model/AdminUssdNotification.js';
 
 const ussdNotificationStatus = ['pending', 'accepted', 'rejected']
 
+/**
+ * 
+export async function getUssdNotification(req, res) {
+    const { hospitalId } = req.hospital;
+    const { limit = 10, page = 1, read } = req.query;
 
-export async function getAppointmentNotification(req, res) {
+    if (read && read !== 'true' && read !== 'false') {
+        return sendResponse(res, 400, false, null, 'Read must be a boolean value');
+    }
+
+    try {
+        const query = { hospitalId };
+        if (read !== undefined) {
+            query.read = read;
+        }
+
+        const totalItems = await UssdNotificationModel.countDocuments(query);
+        const totalPages = Math.ceil(totalItems / limit);
+        const skip = (Number(page) - 1) * Number(limit);
+
+        const notifications = await UssdNotificationModel.find(query)
+            .sort({ createdAt: -1 })
+            .limit(Number(limit))
+            .skip(skip)
+            .lean();
+
+        const ussdRequestIds = notifications.map(n => n.ussdRequestId);
+
+        const ussdRequests = await EmergencyUssdRequestModel.find({
+            ussdRequestId: { $in: ussdRequestIds },
+            $or: [
+                { solved: { $ne: true } },
+                { attendedBy: hospitalId }
+            ]
+        })
+        .select('ussdRequestId phoneNumber message city state selectedPlace selectedAccident status solved attendedBy')
+        .lean();
+
+        const ussdMap = {};
+        ussdRequests.forEach(req => {
+            ussdMap[req.ussdRequestId] = req;
+        });
+
+        const enrichedNotifications = notifications.map(notification => ({
+            ...notification,
+            ussdRequest: ussdMap[notification.ussdRequestId] || null
+        }));
+
+        sendResponse(res, 200, true,
+            {
+                data: enrichedNotifications,
+                total: totalItems,
+                totalPages,
+                currentPage: Number(page),
+                limit: Number(limit)
+            },
+            'Notifications fetched successfully'
+        );
+    } catch (error) {
+        console.error('UNABLE TO GET HOSPITAL NOTIFICATIONS', error);
+        sendResponse(res, 500, false, null, 'Unable to get notifications');
+    }
+}
+
+ */
+
+export async function getUssdNotification(req, res) {
     const { hospitalId } = req.hospital;
     const { limit = 10, page = 1, read, status } = req.query;
 
@@ -33,14 +98,14 @@ export async function getAppointmentNotification(req, res) {
         const allUssdRequestIds = allNotifications.map(n => n.ussdRequestId);
 
         // Step 2: Find only valid requests (not solved or attended by same hospital)
-        const validUssdRequests = await AppointmentUssdRequestModel.find({
+        const validUssdRequests = await EmergencyUssdRequestModel.find({
             ussdRequestId: { $in: allUssdRequestIds },
             $or: [
                 { solved: { $ne: true } },
                 { attendedBy: hospitalId }
             ]
         })
-        .select('ussdRequestId phoneNumber message city state issue day time date status solved attendedBy')
+        .select('ussdRequestId phoneNumber message city state selectedPlace selectedAccident status solved attendedBy')
         .lean();
 
         // Map for quick lookup
@@ -69,15 +134,15 @@ export async function getAppointmentNotification(req, res) {
             totalPages,
             currentPage: Number(page),
             limit: Number(limit)
-        }, 'Appointment Notifications fetched successfully');
+        }, 'Notifications fetched successfully');
 
     } catch (error) {
-        console.error('UNABLE TO GET HOSPITAL APPOINTMENT NOTIFICATIONS', error);
-        return sendResponse(res, 500, false, null, 'Unable to get appointment notifications');
+        console.error('UNABLE TO GET HOSPITAL NOTIFICATIONS', error);
+        return sendResponse(res, 500, false, null, 'Unable to get notifications');
     }
 }
 
-export async function getAnAppointmentNotification(req, res) {
+export async function getANotification(req, res) {
     const { hospitalId } = req.hospital;
     const { notificationId } = req.params;
     if(!notificationId) return sendResponse(res, 400, false, null, 'Notification ID is required');
@@ -87,8 +152,8 @@ export async function getAnAppointmentNotification(req, res) {
             return sendResponse(res, 404, false, null, 'Notification not found');
         }
 
-        const ussdRequest = await AppointmentUssdRequestModel.findOne({ ussdRequestId: notification.ussdRequestId })
-            .select('-__v -_id -text -serviceCode')
+        const ussdRequest = await EmergencyUssdRequestModel.findOne({ ussdRequestId: notification.ussdRequestId })
+            .select('ussdRequestId phoneNumber message city state selectedPlace selectedAccident')
             .lean();
         if (!ussdRequest) {
             return sendResponse(res, 404, false, null, 'USSD request not found');
@@ -119,8 +184,8 @@ export async function markNotificationAsRead(req, res) {
         notification.read = notification.read ? false : true; // Toggle read status
         await notification.save();
 
-        const ussdRequest = await AppointmentUssdRequestModel.findOne({ ussdRequestId: notification.ussdRequestId })
-        .select('-__v -_id')
+        const ussdRequest = await EmergencyUssdRequestModel.findOne({ ussdRequestId: notification.ussdRequestId })
+        .select('ussdRequestId phoneNumber message city state selectedPlace selectedAccident')
         .lean();
 
         sendResponse(res, 200, true, { ...notification.toObject(), ussdRequest }, `Notification marked as ${notification.read ? 'read' : 'unread'}`);
@@ -130,9 +195,9 @@ export async function markNotificationAsRead(req, res) {
     }
 }
 
-export async function acceptNotification(req, res) {
+export async function acceptRequest(req, res) {
     const { hospitalId, name, phoneNumber, address, city, state } = req.hospital;
-    const { notificationId, day, date, time } = req.body;
+    const { notificationId } = req.body;
     if(!notificationId) return sendResponse(res, 400, false, null, 'Notification ID is required');
 
     try {
@@ -142,14 +207,13 @@ export async function acceptNotification(req, res) {
         }
 
         const ussdRequestId = notification.ussdRequestId
-        const getRequest = await AppointmentUssdRequestModel.findOne({ ussdRequestId });
+        const getRequest = await EmergencyUssdRequestModel.findOne({ ussdRequestId });
         if (!getRequest) {
             return sendResponse(res, 404, false, null, 'Ussd Request not found');
         }
 
         // Update the notification status to accepted
         notification.status = 'accepted';
-        notification.read = true
         await notification.save();
 
         if(getRequest.solved){
@@ -160,9 +224,6 @@ export async function acceptNotification(req, res) {
             getRequest.solved = true
             getRequest.status = 'Solved'
             getRequest.attendedBy = hospitalId
-            getRequest.day = day
-            getRequest.date = date
-            getRequest.time = time
             await getRequest.save()
 
             const message = `
@@ -172,30 +233,29 @@ export async function acceptNotification(req, res) {
                     Hospital Phone Number: ${phoneNumber}
                 `
             /**
-             //send sms to the user
-                 console.log('getRequest?.phoneNumber', getRequest?.phoneNumber)
-             const sendSmsMessage = await sendSms({ to: `+${getRequest?.phoneNumber}`, message  })
-             
-             let smsResponse
-             if(sendSmsMessage.success){
-                 smsResponse = sendSmsMessage.data
-             } else {
-                 smsResponse = sendSmsMessage.data
-             }
-             console.log('sendSmsMessage.data', sendSmsMessage.data)
-             
              * 
+            //send sms to the user
+                console.log('getRequest?.phoneNumber', getRequest?.phoneNumber)
+            const sendSmsMessage = await sendSms({ to: `+${getRequest?.phoneNumber}`, message  })
+            
+            let smsResponse
+            if(sendSmsMessage.success){
+                smsResponse = sendSmsMessage.data
+            } else {
+                smsResponse = sendSmsMessage.data
+            }
+            console.log('sendSmsMessage.data', sendSmsMessage.data)
+            
              */
-
             await AdminUssdNotificationModel.create({
                 hospitalId,
                 ussdRequestId,
                 notificationId,
-                notificationType: 'Appointment',
+                notificationType: 'Emergency',
                 message
             })
-            //create aleart to admin
-            
+            //create alreat to admin
+
             sendResponse(res, 200, true, notification, `Request accepted successfully.`);
             return
         }
@@ -207,7 +267,7 @@ export async function acceptNotification(req, res) {
     }
 }
 
-export async function rejectNotification(req, res) {
+export async function rejectRequest(req, res) {
     const { hospitalId } = req.hospital;
     const { notificationId } = req.body;
     if(!notificationId) return sendResponse(res, 400, false, null, 'Notification ID is required');

@@ -1,24 +1,25 @@
 import { useEffect, useState } from "react";
-import Sidebar from "../../Components/Hospital/Sidebar";
-import { useFetchNotification } from "../../Helpers/apis/hospital/fetch";
-import Spinner from "../../Components/Helpers/Spinner";
+import { useFetchAppointments } from "../../Helpers/apis/hospital/fetch";
+import Spinner from "../Helpers/Spinner";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { acceptRequest, markNotificationAsRead, rejectRequest } from "../../Helpers/apis/hospital/apis";
+import { markAppointmentNotificationAsRead, rejectAppointRequest } from "../../Helpers/apis/hospital/apis";
 
-function Emergencies() {
+function TopAppointments({ setAppointmentId, setSelectedCard }) {
     const hospitalData  = useSelector((state) => state.hospital);
     const hospital = hospitalData?.currentUser
 
   const [notifications, setNotifications] = useState([]);
   const [page, setPage] = useState(1);
-  const [readFilter, setReadFilter] = useState("all");
 
   const queryParams = new URLSearchParams();
-  queryParams.append("page", page);
-  if (readFilter !== "all") queryParams.append("read", readFilter);
+  queryParams.append("page", 1);
+  queryParams.append("limit", 10);
+  queryParams.append("status", 'pending');
+  queryParams.append("read", 'false')
 
-  const { data, isFetching } = useFetchNotification(`?${queryParams.toString()}`);
+
+  const { data, isFetching } = useFetchAppointments(`?${queryParams.toString()}`);
 
   const totalPages = data?.data?.totalPages || 1;
 
@@ -100,8 +101,8 @@ function Emergencies() {
     const formData = { hospitalId, notificationId }
     try {
         setMarking(true)
-        //console.log('formData', formData)
-        const res = await markNotificationAsRead(formData)
+        console.log('formData', formData)
+        const res = await markAppointmentNotificationAsRead(formData)
         if(res.success){
             toast.success(res.message)
             window.location.reload()
@@ -109,7 +110,7 @@ function Emergencies() {
             toast.error(res.message)
         }
     } catch (error) {
-        toast.error(`Unable to mark Emergency ${notificationId} as read`)
+        toast.error(`Unable to mark Appointment ${notificationId} as read`)
     } finally {
         setMarking(false)
     }
@@ -123,18 +124,11 @@ function Emergencies() {
     const formData = { notificationId }
 
     try {
-        setAcceptingRequest(true)
-        //console.log('formData', formData)
-        const res = await acceptRequest(formData)
-        if(res.success){
-            toast.success(res.message)
-            window.location.reload()
-        }else {
-            toast.error(res.message)
-        }
+        setAppointmentId(notificationId)
+        setSelectedCard('acceptAppointment')
     } catch (error) {
         console.log('error', error)
-        toast.error(`Unable to accept Emergency ${notificationId}`)
+        toast.error(`Unable to accept Appointment ${notificationId}`)
     } finally {
         setAcceptingRequest(false)
     }
@@ -149,8 +143,8 @@ function Emergencies() {
 
     try {
         setRejectingRequest(true)
-        //console.log('formData', formData)
-        const res = await rejectRequest(formData)
+        console.log('formData', formData)
+        const res = await rejectAppointRequest(formData)
         if(res.success){
             toast.success(res.message)
             window.location.reload()
@@ -167,31 +161,15 @@ function Emergencies() {
 
   return (
       <div className="flex w-full min-h-screen">
-          <div className="w-[20%]">
-              <Sidebar />
-          </div>
 
-          <div className="w-[80%]">
+          <div className="w-full">
               {isFetching ? (
                   <div className="flex items-center justify-center h-screen">
                       <Spinner borderColor={"#142140"} />
                   </div>
               ) : (
                   <div className="max-small-phone:px-2 max-phone:px-2 px-4">
-                      <h1 className="title">Emergency Ussd Notifications</h1>
-
-                      {/* Filter Buttons */}
-                      <div className="flex gap-4 my-4  justify-end">
-                          <button className={`py-2 px-2 rounded-[4px] cursor-pointer ${readFilter === 'all' ? 'bg-dark-blue text-white' : 'bg-white border-[1px] text-dark-blue'}`} variant={readFilter === "all" ? "default" : "outline"} onClick={() => setReadFilter("all")}>
-                              All
-                          </button>
-                          <button className={`py-2 px-2 rounded-[4px] cursor-pointer ${readFilter === 'true' ? 'bg-dark-blue text-white' : 'bg-white border-[1px] text-dark-blue'}`} variant={readFilter === "true" ? "default" : "outline"} onClick={() => setReadFilter("true")}>
-                              Read
-                          </button>
-                          <button className={`py-2 px-2 rounded-[4px] cursor-pointer ${readFilter === 'false' ? 'bg-dark-blue text-white' : 'bg-white border-[1px] text-dark-blue'}`} variant={readFilter === "false" ? "default" : "outline"} onClick={() => setReadFilter("false")}>
-                              Unread
-                          </button>
-                      </div>
+                      <h1 className="title text-[18px]">Recent Appointments Request</h1>
 
                       {/* Notification Table */}
                       <div className="overflow-x-auto">
@@ -216,15 +194,15 @@ function Emergencies() {
                                           <td className="p-2 border border-dark-blue">{item?.ussdRequest?.status || "-"}</td>
                                           <td className="p-2 border border-dark-blue">
                                             {
-                                                    item?.status.toLowerCase() === 'accepted' 
-                                                    ? 
-                                                    <span className="btn2 py-1 px-1 bg-green-500 cursor-not-allowed">Accepted</span> 
-                                                    :
-                                                    item?.status.toLowerCase() === 'rejected'
-                                                    ?
-                                                    <span onClick={() => handleAcceptRequest(hospital.hospitalId, item.notificationId)} className="btn2 py-1 px-1 bg-green-500">Accept</span>
-                                                    :
-                                                    <span className=""> <span onClick={() => handleAcceptRequest(hospital.hospitalId, item.notificationId)} className="btn2 py-1 px-1 bg-green-500">Accept</span>  <span onClick={() => handleRejectRequest(hospital.hospitalId, item.notificationId)} className="btn2 py-1 px-1 bg-red-500">Reject</span> </span>
+                                                item?.status.toLowerCase() === 'accepted' 
+                                                ? 
+                                                <span className="btn2 py-1 px-1 bg-green-500 cursor-not-allowed">Accepted</span> 
+                                                :
+                                                item?.status.toLowerCase() === 'rejected'
+                                                ?
+                                                <span onClick={() => handleAcceptRequest(hospital.hospitalId, item)} className="btn2 py-1 px-1 bg-green-500">Accept</span>
+                                                :
+                                                <span className=""> <span onClick={() => handleAcceptRequest(hospital.hospitalId, item)} className="btn2 py-1 px-1 bg-green-500">Accept</span>  <span onClick={() => handleRejectRequest(hospital.hospitalId, item.notificationId)} className="btn2 py-1 px-1 bg-red-500">Reject</span> </span>
                                             }
                                             </td>
                                       </tr>
@@ -242,4 +220,4 @@ function Emergencies() {
   );
 }
 
-export default Emergencies;
+export default TopAppointments;

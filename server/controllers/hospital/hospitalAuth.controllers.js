@@ -349,7 +349,7 @@ export async function updatePassword(req, res) {
 
 //logout hospital
 export async function logout(req, res) {
-    const { hospitalId } = req.body;
+    const { hospitalId } = req.hospital;
 
     if (!hospitalId) return sendResponse(res, 400, false, null, 'Hospital ID is required')
 
