@@ -13,6 +13,7 @@ import Emergencies from './Pages/Hospital/Emergencies'
 import Appointments from './Pages/Hospital/Appointments'
 import AcceptAppointment from './Components/Hospital/Modal/AcceptAppointment'
 import AdminDashboard from './Pages/Admin/Dashboard'
+import Appointment from './Pages/Hospital/Appointment'
 
 function App() {
     const [ selectedCard, setSelectedCard ] = useState()
@@ -95,6 +96,9 @@ function App() {
             </Route>
             <Route element={<AuthorizeHospital />}>
                 <Route path='/hospital/appointments' element={<Appointments setSelectedCard={setSelectedCard} setAppointmentId={setAppointmentId} />} />
+            </Route>
+            <Route element={<AuthorizeHospital />}>
+                <Route path='/hospital/appointment/:id' element={<Appointment setSelectedCard={setSelectedCard} setAppointmentId={setAppointmentId} />} />
             </Route>
             <Route element={<AuthorizeHospital />}>
                 <Route path='/hospital/profile' element={<Profile />} />

@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 export const AuthenticateHospital = async (req, res, next) => {
     const accessToken = req.cookies.hospitaltoken;
     const accountId = req.cookies.hospitalauthid;
-    console.log('HOSPITAL AUTHENTICATE MIDDLEWARE', accessToken, accountId)
+    //console.log('HOSPITAL AUTHENTICATE MIDDLEWARE', accessToken, accountId)
     try {
         if (accessToken) {
             try {

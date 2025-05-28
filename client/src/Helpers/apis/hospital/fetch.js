@@ -128,4 +128,31 @@ export function useFetchAppointments(query) {
   
     return notification;
   }
+
+//get an appointent
+export function useFetchAppointment(query){
+    if(!query) return toast.error('Appointment Id is required')
+    const [ appointment, setAppointment] = useState({ isFetching: true, data: null, status: null, serverError: null, })
+    useEffect(() => {
+        const fetchAppointmentData = async () => {
+            try {
+                const { data, status} = await axios.get(`hospital/appointment/getANotification/${query}`, {withCredentials: true})
+                //console.log('Data from Hooks>>>', data, 'STATUS', status)
+
+                if(status === 200){
+                    setAppointment({ isFetching: false, data: data, status: status, serverError: null})
+                } else{
+                    setAppointment({ isFetching: false, data: null, status: status, serverError: null})
+                }
+            } catch (error) {
+                const errorMsg = error.response.data.data
+                toast.error(errorMsg || 'Request Failed')
+                setAppointment({ isFetching: false, data: null, status: null, serverError: error})
+            }
+        }
+        fetchAppointmentData()
+    }, [query])
+
+    return appointment
+}
   

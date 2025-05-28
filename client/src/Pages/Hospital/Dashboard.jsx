@@ -55,11 +55,11 @@ function Dashboard({ setSelectedCard, setUssdRequestData, setAppointmentId }) {
         <Sidebar />
       </div>
       <div className="w-[80%]">
-        <div className="">
+        <div className="mt-2">
             <TopNotifications />
         </div>
 
-        <div className="mt-[-7rem]">
+        <div className="mt-[-3rem]">
             <TopAppointments setSelectedCard={setSelectedCard} setAppointmentId={setAppointmentId} />
         </div>
       </div>

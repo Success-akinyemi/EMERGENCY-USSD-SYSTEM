@@ -5,6 +5,7 @@ import Spinner from "../../Components/Helpers/Spinner";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { acceptRequest, markAppointmentNotificationAsRead, rejectAppointRequest } from "../../Helpers/apis/hospital/apis";
+import { Link } from "react-router-dom";
 
 function Appointments({ setSelectedCard, setAppointmentId }) {
     const hospitalData  = useSelector((state) => state.hospital);
@@ -197,6 +198,7 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
                                       <th className="p-2 border border-dark-blue text-left">Read Status</th>
                                       <th className="p-2 border border-dark-blue text-left">Status</th>
                                       <th className="p-2 border border-dark-blue text-left"></th>
+                                      <th className="p-2 border border-dark-blue text-left"></th>
                                   </tr>
                               </thead>
                               <tbody>
@@ -219,6 +221,9 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
                                                     :
                                                     <span className=""> <span onClick={() => handleAcceptRequest(hospital.hospitalId, item)} className="btn2 py-1 px-1 bg-green-500">Accept</span>  <span onClick={() => handleRejectRequest(hospital.hospitalId, item.notificationId)} className="btn2 py-1 px-1 bg-red-500">Reject</span> </span>
                                             }
+                                            </td>
+                                            <td className="p-2 border border-dark-blue" >
+                                                <Link to={`/hospital/appointment/${item?.notificationId}`} className="text-[14px] font-semibold border-b-[2px] border-b-transparent hover:border-b-dark-blue">View Details</Link>
                                             </td>
                                       </tr>
                                   ))}
