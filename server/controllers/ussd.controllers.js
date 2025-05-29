@@ -9,449 +9,50 @@ import { hospitalConnections, hospitalNamespace } from "../server.js";
 import AppointmentUssdRequestModel from "../model/AppointmentUssdRequest.js";
 import { sendCustomNotification } from "./pushNotification.controllers.js";
 
-/**
- * 
- * 
-export async function ussd(req, res) {
-        // Extract device information
-        const agent = useragent.parse(req.headers['user-agent']);
-        const deviceInfo = agent.toString(); // e.g., "Chrome 110.0.0 on Windows 10"
-        const deviceType = agent.device?.family || 'Unknown Device';
-    
-        // Get user IP
-        const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress;
-    
-        // Fetch location details
-        let locationInfo = 'Unknown';
-        try {
-            const { data } = await axios.get(`https://ipinfo.io/${ip}/json`);
-            locationInfo = `${data.city}, ${data.region}, ${data.country}`;
-        } catch (err) {
-            console.log('Error fetching location:', err.message);
-        }
-        console.log('USSD Access:', {
-            'IP': ip,
-            'locationInfo': locationInfo,
-            'deviceType': deviceType,
-            'deviceInfo': deviceInfo
-        });
-        // Read the variables sent via POST from our API
-        const {
-            sessionId,
-            serviceCode,
-            phoneNumber,
-            text,
-        } = req.body;
-    
-        let response = '';
-    
-        if (text == '') {
-            // This is the first request. Note how we start the response with CON
-            response = `CON What would you like to check
-            1. My account
-            2. My phone number`;
-        } else if ( text == '1') {
-            // Business logic for first level response
-            response = `CON Choose account information you want to view
-            1. Account number`;
-        } else if ( text == '2') {
-            // Business logic for first level response
-            // This is a terminal request. Note how we start the response with END
-            response = `END Your phone number is ${phoneNumber}`;
-        } else if ( text == '1*1') {
-            // This is a second level response where the user selected 1 in the first instance
-            const accountNumber = 'ACC100101';
-            // This is a terminal request. Note how we start the response with END
-            response = `END Your account number is ${accountNumber}`;
-        }
-    
-        // Send the response back to the API
-        res.set('Content-Type: text/plain');
-        res.send(response);   
-}
- */
-
-/**
- * 
-const states = [
-    'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue',
-    'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu',
-    'FCT - Abuja', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina',
-    'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo',
-    'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
-  ];
- */
-
-/**
- const lgas = {
-   Abia: ['Aba',],
-   Lagos: ['Ikeja', 'Lekki', 'Epe', 'Yaba', 'Ikorodu'],
-   Abuja: ['Garki', 'Wuse', 'Maitama', 'Asokoro', 'Nyanya'],
-   Kano: ['Nassarawa', 'Dala', 'Gwale', 'Fagge', 'Kumbotso']
-   // Add more...
- };
- * 
- */
-
  const ITEMS_PER_PAGE = 8;
  const HOSPITAL_COVERAGE_RANGE = 100 //100km
-
- /**
-  export async function ussd(req, res) {
-     const { phoneNumber, text, sessionId, serviceCode } = req.body;
-     const levels = text.trim().split('*');
-     const responseLines = [];
-   
-     const accidentTypes = ['Snake bite', 'Road Accident', 'Fire Accident', 'Water Accident', 'Others'];
-     const allStates = await StateModel.find({}).select('state cities').lean();
-     const stateNames = allStates.map(s => s.state);
-   
-   
-     // Get the number of total pages based on the stateNames array
-     const totalPages = Math.ceil(stateNames.length / ITEMS_PER_PAGE);
-   
-     // Function to render a specific page of states
-     const renderStatesPage = (page) => {
-       const pagedStates = getPaged(stateNames, page);
-       responseLines.push(`CON Select your state (Page ${page} of ${totalPages}):`);
-       pagedStates.forEach((state, i) => responseLines.push(`${i + 1}. ${state}`));
-       if (page < totalPages) {
-         responseLines.push(`${ITEMS_PER_PAGE + 1}. More`);
-       }
-     };
-   
-     // Function to get paginated list
-     const getPaged = (list, page) => list.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-   
-     // Step 0: Welcome
-     if (text === '') {
-       responseLines.push('CON Welcome to DMS medical solutions.\nSelect type of emergency:');
-       accidentTypes.forEach((t, i) => responseLines.push(`${i + 1}. ${t}`));
-     }
-   
-     // Step 1: Select Emergency Type
-     else if (levels.length === 1) {
-       const accidentIndex = parseInt(levels[0]) - 1;
-       if (accidentIndex < 0 || accidentIndex >= accidentTypes.length)
-         return res.send('END Invalid emergency type selected.');
-   
-       // Start with the first page of states
-       renderStatesPage(1);
-     }
-   
-     // Step 2: Select State (with pagination)
-     else if (levels.length >= 2 && levels.length < 4) {
-       const accidentIndex = parseInt(levels[0]) - 1;
-       if (accidentIndex < 0 || accidentIndex >= accidentTypes.length)
-         return res.send('END Invalid accident type.');
-   
-       const pageClicks = levels.slice(1).filter(l => l === `${ITEMS_PER_PAGE + 1}`).length;
-       const page = pageClicks + 1;
-       const lastInput = parseInt(levels[levels.length - 1]);
-   
-       // User wants more states
-       if (lastInput === ITEMS_PER_PAGE + 1 || isNaN(lastInput)) {
-         if (page < totalPages) {
-           renderStatesPage(page + 1);
-         } else {
-           renderStatesPage(page);
-         }
-       } else {
-         const stateIndex = (page - 1) * ITEMS_PER_PAGE + lastInput - 1;
-         const selectedState = allStates[stateIndex];
-         if (!selectedState) return res.send('END Invalid state selected.');
-   
-         const pagedCities = getPaged(selectedState.cities, 1);
-         responseLines.push(`CON ${selectedState.state}: Select your city (Page 1):`);
-         pagedCities.forEach((city, i) => responseLines.push(`${i + 1}. ${city.city}`));
-         if (selectedState.cities.length > ITEMS_PER_PAGE) responseLines.push(`${ITEMS_PER_PAGE + 1}. More`);
-       }
-     }
-   
-     // Step 3: Select City (with pagination)
-     else if (levels.length >= 4 && levels.length < 6) {
-       const accidentIndex = parseInt(levels[0]) - 1;
-       const statePageClicks = levels.slice(1, 3).filter(l => l === `${ITEMS_PER_PAGE + 1}`).length;
-       const statePage = statePageClicks + 1;
-       const stateSelection = parseInt(levels[statePageClicks + 1]) - 1;
-       const stateIndex = (statePage - 1) * ITEMS_PER_PAGE + stateSelection;
-       const selectedState = allStates[stateIndex];
-       if (!selectedState) return res.send('END Invalid state selected.');
-   
-       const cityClicks = levels.slice(3).filter(l => l === `${ITEMS_PER_PAGE + 1}`).length;
-       const cityPage = cityClicks + 1;
-       const lastInput = parseInt(levels[levels.length - 1]);
-   
-       if (lastInput === ITEMS_PER_PAGE + 1) {
-         const nextCities = getPaged(selectedState.cities, cityPage + 1);
-         responseLines.push(`CON ${selectedState.state}: Select your city (Page ${cityPage + 1}):`);
-         nextCities.forEach((c, i) => responseLines.push(`${i + 1}. ${c.city}`));
-         if (selectedState.cities.length > (cityPage + 1) * ITEMS_PER_PAGE)
-           responseLines.push(`${ITEMS_PER_PAGE + 1}. More`);
-       } else {
-         const cityIndex = (cityPage - 1) * ITEMS_PER_PAGE + lastInput - 1;
-         const selectedCity = selectedState.cities[cityIndex];
-         if (!selectedCity) return res.send('END Invalid city selected.');
-   
-         const pagedLandmarks = getPaged(selectedCity.landmarks, 1);
-         responseLines.push(`CON ${selectedCity.city}: Select a landmark (Page 1):`);
-         pagedLandmarks.forEach((lm, i) => responseLines.push(`${i + 1}. ${lm.place}`));
-         if (selectedCity.landmarks.length > ITEMS_PER_PAGE) responseLines.push(`${ITEMS_PER_PAGE + 1}. More`);
-       }
-     }
-   
-     // Step 4: Landmark Selection
-     else {
-       try {
-         const accidentIndex = parseInt(levels[0]) - 1;
-         const statePageClicks = levels.slice(1, 3).filter(l => l === `${ITEMS_PER_PAGE + 1}`).length;
-         const statePage = statePageClicks + 1;
-         const stateSelection = parseInt(levels[statePageClicks + 1]) - 1;
-         const stateIndex = (statePage - 1) * ITEMS_PER_PAGE + stateSelection;
-         const selectedState = allStates[stateIndex];
-         if (!selectedState) return res.send('END Invalid state.');
-   
-         const cityClicks = levels.slice(3, 5).filter(l => l === `${ITEMS_PER_PAGE + 1}`).length;
-         const cityPage = cityClicks + 1;
-         const citySelection = parseInt(levels[cityClicks + 3]) - 1;
-         const cityIndex = (cityPage - 1) * ITEMS_PER_PAGE + citySelection;
-         const selectedCity = selectedState.cities[cityIndex];
-         if (!selectedCity) return res.send('END Invalid city.');
-   
-         const landmarkClicks = levels.slice(5).filter(l => l === `${ITEMS_PER_PAGE + 1}`).length;
-         const landmarkPage = landmarkClicks + 1;
-         const landmarkSelection = parseInt(levels[levels.length - 1]) - 1;
-         const landmarkIndex = (landmarkPage - 1) * ITEMS_PER_PAGE + landmarkSelection;
-         const selectedLandmark = selectedCity.landmarks[landmarkIndex];
-         if (!selectedLandmark) return res.send('END Invalid landmark.');
-   
-         responseLines.push(`END Dear user, your accident "${accidentTypes[accidentIndex]}" has been received.`);
-         responseLines.push(`Location: ${selectedLandmark.place}, ${selectedCity.city}, ${selectedState.state}.`);
-         responseLines.push(`Latitude: ${selectedLandmark.lat}, Longitude: ${selectedLandmark.lng}`);
-         responseLines.push(`An SMS will be sent shortly.`);
-   
-         await UssdRequestModel.create({
-           phoneNumber,
-           message: `Dear user, your accident "${accidentTypes[accidentIndex]}" at ${selectedLandmark.place}, ${selectedCity.city}, ${selectedState.state} has been recorded. (lat: ${selectedLandmark.lat}, lng: ${selectedLandmark.lng})`,
-           sessionId,
-           selectedAccident: accidentTypes[accidentIndex],
-           selectedPlace: selectedLandmark.place,
-           city: selectedCity.city,
-           state: selectedState.state,
-           lat: selectedLandmark.lat,
-           lng: selectedLandmark.lng,
-           serviceCode,
-           text
-         });
-       } catch (err) {
-         return res.send('END Something went wrong.');
-       }
-     }
-   
-     res.set('Content-Type', 'text/plain');
-     res.send(responseLines.join('\n'));
-   }
-  */
-
-  
-   /**
-    * 
-   
-   export async function ussd(req, res) {
-       const { phoneNumber, text, sessionId, serviceCode } = req.body;
-       const levels = text.trim().split('*');
-       const responseLines = [];
-       console.log('USSD Access:',text)
-   
-       const accidentTypes = ['Snake bite', 'Road Accident', 'Fire Accident', 'Water Accident', 'Others'];
-       const allStates = await StateModel.find({}).select('state cities').lean();
-       const stateNames = allStates.map(s => s.state);
-       let stateLength = Math.ceil(Number(stateNames.length) / ITEMS_PER_PAGE);
-        let totalCityLength
-        let gottenCity = false
-        let selectedStateIndex = 0
-   
-       const getPaged = (list, page) => 
-           list.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-   
-       // Step 0: Initial menu
-       if (text === '') {
-           responseLines.push('CON Welcome to DMS medical solutions.\nSelect type of emergency:');
-           accidentTypes.forEach((t, i) => responseLines.push(`${i + 1}. ${t}`));
-       }
-   
-       // Step 1: Accident type selected
-       else if (levels.length === 1) {
-           const accidentIndex = parseInt(levels[0]) - 1;
-           if (isNaN(accidentIndex)) return res.send('END Invalid input');
-           
-           const totalPages = Math.ceil(stateNames.length / ITEMS_PER_PAGE);
-           responseLines.push(`CON Select your state (Page 1 of ${totalPages}):`);
-           getPaged(stateNames, 1).forEach((state, i) => 
-               responseLines.push(`${i + 1}. ${state}`));
-           if (stateNames.length > ITEMS_PER_PAGE) responseLines.push('9. More');
-       }
-   
-       // Step 2: State selection with pagination
-       else if (levels.length >= 2 && levels.length <= Number(stateLength)) {
-           const accidentIndex = parseInt(levels[0]) - 1;
-           if (accidentIndex < 0 || accidentIndex >= accidentTypes.length) 
-               return res.send('END Invalid accident type');
-   
-           // Calculate current page state
-           const pageClicks = levels.slice(1).filter(l => l === '9').length;
-           const currentPage = pageClicks ;
-           //const currentPage = pageClicks + 1;
-           const lastInput = levels[levels.length - 1];
-   
-           if (lastInput === '9') {
-               const totalPages = Math.ceil(stateNames.length / ITEMS_PER_PAGE);
-               if (currentPage >= totalPages) 
-                   return res.send('END No more states available');
-   
-               const nextPage = currentPage + 1;
-               responseLines.push(`CON Select your state (Page ${nextPage} of ${totalPages}):`);
-               getPaged(stateNames, nextPage).forEach((state, i) => 
-                   responseLines.push(`${i + 1}. ${state}`));
-               
-               if (nextPage < totalPages) responseLines.push('9. More');
-           } 
-           else {
-                stateLength = levels.length;
-                console.log('stateLength', stateLength, levels.length)
-               //const stateIndex = (currentPage - 1) * ITEMS_PER_PAGE + parseInt(lastInput) - 1;
-               const stateIndex = (currentPage) * ITEMS_PER_PAGE + parseInt(lastInput) - 1;
-
-               if (stateIndex >= allStates.length || stateIndex < 0) 
-                   return res.send('END Invalid state selection');
-   
-               const selectedState = allStates[stateIndex];
-               selectedStateIndex = stateIndex
-               console.log('stateLengthss', stateLength, levels.length, stateIndex, currentPage, lastInput)
-               responseLines.push(`CON ${selectedState.state}: Select city (Page 1):`);
-               //console.log('selectedState', selectedState)
-               getPaged(selectedState.cities, 1).forEach((city, i) => 
-                   responseLines.push(`${i + 1}. ${city.city}`));
-               
-               if (selectedState.cities.length > ITEMS_PER_PAGE) responseLines.push('9. More');
-           }
-       }
-   
-       // Step 3: City selection with pagination
-       else if (levels.length > Number(stateLength) && !gottenCity) {
-            //console.log('LEVEL')
-           const stateIndex = getSelectedIndex(levels.slice(0, 2), stateNames.length);
-           console.log('selectedStateIndex', selectedStateIndex)
-           const selectedState = allStates[stateIndex];
-           console.log('selectedStatess', selectedState, stateIndex)
-           const cityPage = levels.slice(2).filter(l => l === '9').length + 1;
-           const lastInput = levels[levels.length - 1];
-           
-           const totalCityLength = Math.ceil(selectedState.cities.length / ITEMS_PER_PAGE);
-
-   
-           if (lastInput === '9') {
-               const totalCityPages = Math.ceil(selectedState.cities.length / ITEMS_PER_PAGE);
-               if (cityPage >= totalCityPages) 
-                   return res.send('END No more cities available');
-   
-               const nextPage = cityPage + 1;
-               responseLines.push(`CON ${selectedState.state}: Select city (Page ${nextPage}):`);
-               getPaged(selectedState.cities, nextPage).forEach((city, i) => 
-                   responseLines.push(`${i + 1}. ${city.city}`));
-               
-               if (nextPage < totalCityPages) responseLines.push('9. More');
-           } 
-           else {
-                gottenCity = true
-               //const cityIndex = (cityPage - 1) * ITEMS_PER_PAGE + parseInt(lastInput) - 1;
-               //const cityIndex = (lastInput) * ITEMS_PER_PAGE + parseInt(lastInput) - 1;
-               
-               const cityPageClicks = levels.slice(Number(stateLength)).filter(l => l === '9').length;
-                const cityPage = cityPageClicks + 1;
-                const lastInput = levels[levels.length - 1];
-
-                const cityIndex = (cityPage - 1) * ITEMS_PER_PAGE + parseInt(lastInput) - 1;
-
-               console.log('cityIndex', cityIndex, selectedState.cities, cityPage)
-
-               if (cityIndex >= selectedState.cities.length || cityIndex < 0)
-                return res.send('END Invalid city selection');
-
-               const selectedCity = selectedState.cities[cityIndex];
-               console.log('selectedCity', selectedCity)
-               responseLines.push(`CON ${selectedCity.city}: Select landmark (Page 1):`);
-               getPaged(selectedCity.landmarks, 1).forEach((landmark, i) => 
-                   responseLines.push(`${i + 1}. ${landmark.place}`));
-               
-               if (selectedCity.landmarks.length > ITEMS_PER_PAGE) responseLines.push('9. More');
-           }
-       }
-   
-       // Step 4: Landmark selection with pagination
-       else {
-           const stateIndex = getSelectedIndex(levels.slice(0, 2), stateNames.length);
-           const selectedState = allStates[stateIndex];
-           const cityIndex = getSelectedIndex(levels.slice(2, 4), selectedState.cities.length);
-           const selectedCity = selectedState.cities[cityIndex];
-           console.log('selectedCity 2', selectedCity)
-           const landmarkPage = levels.slice(4).filter(l => l === '9').length + 1;
-           const lastInput = levels[levels.length - 1];
-   
-           if (lastInput === '9') {
-               const totalLandmarkPages = Math.ceil(selectedCity.landmarks.length / ITEMS_PER_PAGE);
-               if (landmarkPage >= totalLandmarkPages) 
-                   return res.send('END No more landmarks available');
-   
-               const nextPage = landmarkPage + 1;
-               responseLines.push(`CON ${selectedCity.city}: Select landmark (Page ${nextPage}):`);
-               getPaged(selectedCity.landmarks, nextPage).forEach((landmark, i) => 
-                   responseLines.push(`${i + 1}. ${landmark.place}`));
-               
-               if (nextPage < totalLandmarkPages) responseLines.push('9. More');
-           } 
-           else {
-               const landmarkIndex = (landmarkPage - 1) * ITEMS_PER_PAGE + parseInt(lastInput) - 1;
-               if (landmarkIndex >= selectedCity.landmarks.length || landmarkIndex < 0) 
-                   return res.send('END Invalid landmark selection');
-   
-               const selectedLandmark = selectedCity.landmarks[landmarkIndex];
-               const accidentType = accidentTypes[parseInt(levels[0]) - 1];
-               
-               // Save to database
-               await UssdRequestModel.create({
-                   phoneNumber,
-                   message: `Emergency: ${accidentType} at ${selectedLandmark.place}, ${selectedCity.city}, ${selectedState.state}`,
-                   sessionId,
-                   selectedAccident: accidentType,
-                   selectedPlace: selectedLandmark.place,
-                   city: selectedCity.city,
-                   state: selectedState.state,
-                   lat: selectedLandmark.lat,
-                   lng: selectedLandmark.lng,
-                   serviceCode,
-                   text
-               });
-   
-               responseLines.push(`END Emergency reported successfully!\n` +
-                   `Type: ${accidentType}\n` +
-                   `Location: ${selectedLandmark.place}\n` +
-                   `City: ${selectedCity.city}\n` +
-                   `State: ${selectedState.state}\n` +
-                   `Coordinates: ${selectedLandmark.lat},${selectedLandmark.lng}`);
-           }
-       }
-   
-       res.set('Content-Type', 'text/plain');
-       res.send(responseLines.join('\n'));
-   }
-   */
 
 function capitalizeFirstLetter(string) {
     if (!string) return '';
     return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 }
 
+function getDayName(date) {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days[date.getDay()];
+}
+
+function parseTime(timeStr) {
+  const [time, modifier] = timeStr.split(' ');
+  let [hours, minutes] = time.split(':').map(Number);
+  
+  if (modifier === 'PM' && hours < 12) hours += 12;
+  if (modifier === 'AM' && hours === 12) hours = 0;
+  
+  return { hours, minutes };
+}
+
+function formatTime(date) {
+  let hours = date.getHours();
+  let minutes = date.getMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  
+  hours = hours % 12;
+  hours = hours ? hours : 12; // 0 becomes 12
+  minutes = minutes < 10 ? '0' + minutes : minutes;
+  
+  return `${hours}:${minutes} ${ampm}`;
+}
+
+function addMinutes(date, minutes) {
+  return new Date(date.getTime() + minutes * 60000);
+}
+
+function isSameDay(d1, d2) {
+  return d1.getFullYear() === d2.getFullYear() &&
+         d1.getMonth() === d2.getMonth() &&
+         d1.getDate() === d2.getDate();
+}
 
 export async function ussd(req, res) {
     const { phoneNumber, text, sessionId, serviceCode } = req.body;
@@ -810,7 +411,7 @@ export async function ussd(req, res) {
             if (hospitals.length > ITEMS_PER_PAGE) responseLines.push('9. More');
         }
 
-        // Step 5: Hospital selected - confirmation
+        // Step 5: Hospital selected - show available days
         else if (levels.length === 5) {
             const [_, stateInput, cityInput, issueInput, hospitalInput] = levels;
             const stateIndex = parseInt(stateInput) - 1;
@@ -820,7 +421,7 @@ export async function ussd(req, res) {
             // Validate selections
             const issueIndex = parseInt(issueInput) - 1;
             if (issueIndex < 0 || issueIndex >= consultationIssues.length)
-                return res.send('END Invalid issue selection');
+            return res.send('END Invalid issue selection');
 
             // Get state and city
             const statesAgg = await HospitalModel.aggregate([
@@ -852,7 +453,7 @@ export async function ussd(req, res) {
                 city: new RegExp(`^\\s*${selectedCity}\\s*$`, 'i')
             }).select('location').lean();
             if (!baseHospital) {
-                return res.send('END No reference hospital found in selected area');
+            return res.send('END No reference hospital found in selected area');
             }
 
             // Find nearby hospitals
@@ -865,46 +466,245 @@ export async function ussd(req, res) {
             },
             state: new RegExp(`^\\s*${selectedState}\\s*$`, 'i'),
             city: new RegExp(`^\\s*${selectedCity}\\s*$`, 'i')
-            }).select('name hospitalId email');
-
+            }).select('name hospitalId email openingDays openingHours closingHours nextAvailablePeriod');
+            
             if (hospitalIndex < 0 || hospitalIndex >= hospitals.length)
-                return res.send('END Invalid hospital selection');
+            return res.send('END Invalid hospital selection');
 
             const selectedHospital = hospitals[hospitalIndex];
 
+            // Generate available days
+            const now = new Date();
+            const days = [];
+            let currentDate = new Date(now);
+            
+            // Check if we should skip today
+            const { hours: closingHour, minutes: closingMinute } = parseTime(selectedHospital.closingHours);
+            const closingTime = new Date(now);
+            closingTime.setHours(closingHour, closingMinute, 0, 0);
+            
+            if (now > closingTime) {
+            currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            // Get next 5 opening days
+            for (let i = 0; i < 7 && days.length < 5; i++) {
+            const dayName = getDayName(currentDate);
+            
+            if (selectedHospital.openingDays.includes(dayName)) {
+                days.push({
+                name: dayName,
+                date: new Date(currentDate)
+                });
+            }
+            
+            currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            // Save hospital ID temporarily for next step
+            const ussdRequestId = await generateUniqueCode(9);
+            const tempRequest = await AppointmentUssdRequestModel.create({
+                ussdRequestId: `${ussdRequestId}TEMPREQ`, 
+                phoneNumber,
+                sessionId: `${sessionId}TEMPREQ`,
+                hospitalId: selectedHospital.hospitalId,
+                issue: consultationIssues[issueIndex],
+                state: selectedState,
+                city: selectedCity
+            });
+
+            responseLines.push('CON Select appointment day:');
+            days.forEach((day, i) => {
+            const dateStr = day.date.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+            responseLines.push(`${i+1}. ${dateStr}`);
+            });
+        }
+
+          // Step 6: Day selection and time assignment
+        else if (levels.length === 6) {
+            const dayIndex = parseInt(levels[5]) - 1;
+            
+            // Get temporary request data
+            const tempRequest = await AppointmentUssdRequestModel.findOne({ sessionId: `${sessionId}TEMPREQ` })
+            .sort({ createdAt: -1 });
+            
+            if (!tempRequest) {
+            return res.send('END Session expired. Please start over.');
+            }
+
+            // Get hospital
+            const hospital = await HospitalModel.findOne({ hospitalId: tempRequest.hospitalId });
+            if (!hospital) {
+            return res.send('END Hospital not found');
+            }
+
+            // Reconstruct available days (same as in step 5)
+            const now = new Date();
+            const days = [];
+            let currentDate = new Date(now);
+            
+            const { hours: closureHour, minutes: closuregMinute } = parseTime(hospital.closingHours);
+            const closingTime = new Date(now);
+            closingTime.setHours(closureHour, closuregMinute, 0, 0);
+            
+            if (now > closingTime) {
+            currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            for (let i = 0; i < 7 && days.length < 5; i++) {
+            const dayName = getDayName(currentDate);
+            
+            if (hospital.openingDays.includes(dayName)) {
+                days.push({
+                name: dayName,
+                date: new Date(currentDate)
+                });
+            }
+            
+            currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            if (dayIndex < 0 || dayIndex >= days.length) {
+            return res.send('END Invalid day selection');
+            }
+
+            const selectedDay = days[dayIndex];
+            const dayName = selectedDay.name;
+            const appointmentDate = selectedDay.date;
+
+            // Find or create availability slot
+            let slot = hospital.nextAvailablePeriod.find(
+            s => s.day === dayName
+            );
+
+            // Initialize slot if not exists or outdated
+            if (!slot || new Date(slot.date) < new Date()) {
+            const { hours, minutes } = parseTime(hospital.openingHours);
+            appointmentDate.setHours(hours, minutes, 0, 0);
+            
+            slot = {
+                day: dayName,
+                nextAvailabletime: hospital.openingHours,
+                date: appointmentDate
+            };
+            
+            hospital.nextAvailablePeriod.push(slot);
+            }
+
+            // Calculate appointment time
+            let appointmentTime = new Date(slot.date);
+            const [time, modifier] = slot.nextAvailabletime.split(' ');
+            const [hoursStr, minutesStr] = time.split(':');
+            appointmentTime.setHours(
+            parseInt(hoursStr) + (modifier === 'PM' && hoursStr < 12 ? 12 : 0),
+            parseInt(minutesStr)
+            );
+
+            // Adjust for today's appointments
+            if (isSameDay(appointmentDate, new Date())) {
+            const twentyMinsLater = new Date(now.getTime() + 20 * 60000);
+            
+            if (appointmentTime < twentyMinsLater) {
+                // Round up to next 30-minute slot
+                const minutes = twentyMinsLater.getMinutes();
+                const roundUp = minutes > 30 ? 60 : 30;
+                appointmentTime = new Date(twentyMinsLater);
+                appointmentTime.setMinutes(roundUp, 0, 0);
+            }
+            }
+
+            // Check if exceeds closing time
+            const closingDateTime = new Date(appointmentDate);
+            const { hours: closingHour, minutes: closingMinute } = parseTime(hospital.closingHours);
+            closingDateTime.setHours(closingHour, closingMinute, 0, 0);
+            
+            const appointmentEndTime = addMinutes(appointmentTime, 30);
+            
+            if (appointmentEndTime > closingDateTime) {
+            // Move to next day
+            const nextDay = new Date(appointmentDate);
+            nextDay.setDate(nextDay.getDate() + 1);
+            
+            // Find next opening day
+            while (!hospital.openingDays.includes(getDayName(nextDay))) {
+                nextDay.setDate(nextDay.getDate() + 1);
+            }
+            
+            appointmentDate.setDate(nextDay.getDate());
+            appointmentDate.setMonth(nextDay.getMonth());
+            appointmentDate.setFullYear(nextDay.getFullYear());
+            
+            const { hours, minutes } = parseTime(hospital.openingHours);
+            appointmentDate.setHours(hours, minutes, 0, 0);
+            appointmentTime = new Date(appointmentDate);
+            
+            // Update slot
+            slot.day = getDayName(nextDay);
+            slot.date = appointmentDate;
+            slot.nextAvailabletime = hospital.openingHours;
+            }
+
+            // Update next available time
+            const nextSlotTime = addMinutes(appointmentTime, 30);
+            slot.nextAvailabletime = formatTime(nextSlotTime);
+            slot.date = appointmentDate;
+            
+            // Save hospital updates
+            await hospital.save();
+
+            // Format date/time for display
+            const formattedDate = appointmentDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+            });
+            const formattedTime = formatTime(appointmentTime);
+
+            // Create final appointment
             const ussdRequestId = await generateUniqueCode(9);
             const ussdRequest = await AppointmentUssdRequestModel.create({
-                ussdRequestId,
-                phoneNumber,
-                message: `Appointment: Issues: ${consultationIssues[issueIndex]}`,
-                sessionId,
-                notificationType: 'Appointment',
-                state: `${capitalizeFirstLetter(selectedState)}`,
-                city: `${capitalizeFirstLetter(selectedCity)}`,
-                issue: `${consultationIssues[issueIndex]}`,
-                hospitalId: `${selectedHospital.hospitalId}`
-            })
+            ussdRequestId,
+            phoneNumber,
+            message: `Appointment: ${tempRequest.issue}`,
+            sessionId,
+            notificationType: 'Appointment',
+            state: tempRequest.state,
+            city: tempRequest.city,
+            issue: tempRequest.issue,
+            hospitalId: hospital.hospitalId,
+            date: appointmentDate,
+            time: formattedTime
+            });
 
             await sendCustomNotification({
                 title: `New Appointment`,
-                message: `Appointment: Issues: ${consultationIssues[issueIndex]}`,
-                email: `${selectedHospital.email}`
+                message: `Appointment: Issues: ${tempRequest.issue}`,
+                email: `${hospital.email}`
             })
 
             await UssdNotificationModel.create({
-                hospitalId: selectedHospital.hospitalId,
+                hospitalId: hospital.hospitalId,
                 ussdRequestId,
                 notificationId: await generateUniqueCode(9)
             })
- 
+
             responseLines.push(
-                `END Appointment confirmed!\n` +
-                `State: ${capitalizeFirstLetter(selectedState)}\n` +
-                `City: ${capitalizeFirstLetter(selectedCity)}\n` +
-                `Issue: ${consultationIssues[issueIndex]}\n` +
-                `Hospital: ${selectedHospital.name}\n` +
-                `Hospital ID: ${selectedHospital.hospitalId}`
+            `END Appointment confirmed!\n` +
+            `State: ${tempRequest.state}\n` +
+            `City: ${tempRequest.city}\n` +
+            `Issue: ${tempRequest.issue}\n` +
+            `Hospital: ${hospital.name}\n` +
+            `Date: ${formattedDate} at ${formattedTime}\n` +
+            `Request ID: ${ussdRequestId}`
             );
+            
+            // Clean up temp request
+            await AppointmentUssdRequestModel.deleteOne({ _id: tempRequest._id });
         }
     }
 

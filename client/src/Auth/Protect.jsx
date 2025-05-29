@@ -43,7 +43,7 @@ function AuthorizeHospital() {
               if (res.success) {
                 localStorage.setItem('dmsquickresponse', res?.token);
                 dispatch(signInSuccess(res?.data));
-                next()
+                //next()
                 //navigate('/hospital/dashboard');
               } else {
                 console.log('Unable to refresh token res', res);

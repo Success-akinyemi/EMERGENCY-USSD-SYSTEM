@@ -81,7 +81,6 @@ function Appointment({ setSelectedCard, setAppointmentId }) {
         setRejectingRequest(false)
     }
   }
-                    {console.log('DATA', data)}
 
 
   return (
@@ -143,17 +142,17 @@ function Appointment({ setSelectedCard, setAppointmentId }) {
                         <button onClick={() => handleMarkAsRead(hospital.hospitalId, data.notificationId)} className="p-2 border btn2">{data?.read ? "Read" : <span className="cursor-pointer">Mark as Read</span>}</button>
                     </div>
                     <div className="flex gap-2">
-                                            {
-                                                    data?.status.toLowerCase() === 'accepted' 
-                                                    ? 
-                                                    <span className="btn2 py-1 px-1 bg-green-500 cursor-not-allowed">Accepted</span> 
-                                                    :
-                                                    data?.status.toLowerCase() === 'rejected'
-                                                    ?
-                                                    <span onClick={() => handleAcceptRequest(hospital.hospitalId, data)} className="btn2 py-1 px-1 bg-green-500">Accept</span>
-                                                    :
-                                                    <span className=""> <span onClick={() => handleAcceptRequest(hospital.hospitalId, data)} className="btn2 py-1 px-1 bg-green-500">Accept</span>  <span onClick={() => handleRejectRequest(hospital.hospitalId, item.notificationId)} className="btn2 py-1 px-1 bg-red-500">Reject</span> </span>
-                                            }
+                        {
+                            data?.status.toLowerCase() === 'accepted' 
+                            ? 
+                            <span className="btn2 py-1 px-1 bg-green-500 cursor-not-allowed">Accepted</span> 
+                            :
+                            data?.status.toLowerCase() === 'rejected'
+                            ?
+                            <span onClick={() => handleAcceptRequest(hospital.hospitalId, data)} className="btn2 py-1 px-1 bg-green-500">Accept</span>
+                            :
+                            <span className=""> <span onClick={() => handleAcceptRequest(hospital.hospitalId, data)} className="btn2 py-1 px-1 bg-green-500">Accept</span>  <span onClick={() => handleRejectRequest(hospital.hospitalId, item.notificationId)} className="btn2 py-1 px-1 bg-red-500">Reject</span> </span>
+                        }
                     </div>
                 </div>
             )

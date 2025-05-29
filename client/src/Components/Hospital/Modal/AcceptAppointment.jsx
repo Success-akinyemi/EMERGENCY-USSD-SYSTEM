@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { acceptAppointmentRequest } from "../../../Helpers/apis/hospital/apis"
 import toast from "react-hot-toast"
 
@@ -16,6 +16,10 @@ function AcceptAppointment({ appointmentId }) {
             setFormData({ ...formData, [e.target.id]: e.target.value })
         }
     }
+
+    useEffect(() => {
+        console.log(formData)
+    }, [formData])
 
     //accept ussd req
     const [ acceptingRequest, setAcceptingRequest ] = useState(false)

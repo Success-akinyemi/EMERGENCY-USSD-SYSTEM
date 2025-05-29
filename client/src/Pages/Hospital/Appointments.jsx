@@ -11,15 +11,34 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
     const hospitalData  = useSelector((state) => state.hospital);
     const hospital = hospitalData?.currentUser
 
-  const [notifications, setNotifications] = useState([]);
-  const [page, setPage] = useState(1);
-  const [readFilter, setReadFilter] = useState("all");
+    const [notifications, setNotifications] = useState([]);
+    const [page, setPage] = useState(1);
+    const [readFilter, setReadFilter] = useState("all");
+    const [statusFilter, setStatusFilter] = useState();
+    const [ showStatusMenu, setShowStatusMenu ] = useState(false)
 
+    const handleStatusFilter = (data) => {
+        if(data) {
+            setStatusFilter(data)
+            setShowStatusMenu(!showStatusMenu)
+        } else {
+            setStatusFilter()
+            setShowStatusMenu(!showStatusMenu)
+        }
+    }
+
+    //read status
   const queryParams = new URLSearchParams();
   queryParams.append("page", page);
   if (readFilter !== "all") queryParams.append("read", readFilter);
 
-  const { data, isFetching } = useFetchAppointments(`?${queryParams.toString()}`);
+    //accepted status
+  const statusQueryParams = new URLSearchParams();
+  statusQueryParams.append("status", statusFilter);
+  if (statusFilter === "") statusQueryParams.append("status", '');
+
+
+  const { data, isFetching } = useFetchAppointments(`?${queryParams.toString()}&${statusQueryParams.toString()}`);
 
   const totalPages = data?.data?.totalPages || 1;
 
@@ -174,8 +193,9 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
                   <div className="max-small-phone:px-2 max-phone:px-2 px-4">
                       <h1 className="title">Appointments Ussd Notifications</h1>
 
-                      {/* Filter Buttons */}
-                      <div className="flex gap-4 my-4  justify-end">
+                    <div className="flex justify-end my-4 gap-4">
+                      {/*Read Filter Buttons */}
+                      <div className="flex gap-4">
                           <button className={`py-2 px-2 rounded-[4px] cursor-pointer ${readFilter === 'all' ? 'bg-dark-blue text-white' : 'bg-white border-[1px] text-dark-blue'}`} variant={readFilter === "all" ? "default" : "outline"} onClick={() => setReadFilter("all")}>
                               All
                           </button>
@@ -186,6 +206,24 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
                               Unread
                           </button>
                       </div>
+
+                      {/**STATUS FILTER BUTTONS */}
+                        <div className="relative">
+                            <div onClick={() => setShowStatusMenu(!showStatusMenu)} className="bg-dark-blue text-white px-1 py-1.5 rounded-[4px] min-w-[100px]">{statusFilter || 'All'}</div>
+                            {
+                                showStatusMenu && (
+                                    <div className={`flex flex-col bg-white border-[2px] border-dark-blue py-3 px-1 rounded-[4px] absolute mt-1`}>
+                                        <div onClick={() => handleStatusFilter(``)} className={`text-dark-blue text-[15px] font-semibold cursor-pointer py-1 px-1.5 rounded-[4px] hover:text-white hover:bg-dark-blue transition-all duration-100 ${statusFilter === '' && 'bg-dark-blue text-white'}`}>All</div>
+                                        <div onClick={() => handleStatusFilter(`Pending`)} className={`text-dark-blue text-[15px] font-semibold cursor-pointer py-1 px-1.5 rounded-[4px] hover:text-white hover:bg-dark-blue transition-all duration-100 ${statusFilter === 'Pending' && 'bg-dark-blue text-white'}`}>Pending</div>
+                                        <div onClick={() => handleStatusFilter(`Accepted`)} className={`text-dark-blue text-[15px] font-semibold cursor-pointer py-1 px-1.5 rounded-[4px] hover:text-white hover:bg-dark-blue transition-all duration-100 ${statusFilter === 'Accepted' && 'bg-dark-blue text-white'}`}>Accepted</div>
+                                        <div onClick={() => handleStatusFilter(`Rejected`)} className={`text-dark-blue text-[15px] font-semibold cursor-pointer py-1 px-1.5 rounded-[4px] hover:text-white hover:bg-dark-blue transition-all duration-100 ${statusFilter === 'Rejected' && 'bg-dark-blue text-white'}`}>Rejected</div>
+                                    </div>
+                                )
+                            }
+                        </div>
+
+                    </div>
+
 
                       {/* Notification Table */}
                       <div className="overflow-x-auto">

@@ -18,9 +18,43 @@ function Profile() {
     const [ city, setCity ] = useState('')
     const [ lat, setLat ] = useState('')
     const [ lng, setLng ] = useState('')
+    
+    const openingDaysArray = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const [selectedDays, setSelectedDays] = useState([]);
+
+    const handleRemoveDay = (dayToRemove) => {
+        setSelectedDays(prev => prev.filter(day => day !== dayToRemove));
+        setFormData({ ...formData, openingDays: setSelectedDays(prev => prev.filter(day => day !== dayToRemove)) }); 
+    };
+
+    const handleDayToggle = (day) => {
+        setSelectedDays(prev => {
+            const updated = prev.includes(day)
+                ? prev.filter(d => d !== day)
+                : [...prev, day];
+            setFormData({ ...formData, openingDays: updated }); 
+            return updated;
+        });
+    };
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.id]: e.target.value })
+        if (e.target.id === "openingHours") {
+            const [hour, minute] = e.target.value.split(":").map(Number);
+
+            const period = hour >= 12 ? "PM" : "AM";
+            const hour12 = hour % 12 || 12;
+
+            setFormData({ ...formData, openingHours: `${hour12}:${minute < 10 ? '0' + minute : minute} ${period}` })
+        } else if (e.target.id === "closingHours") {
+            const [hour, minute] = e.target.value.split(":").map(Number);
+
+            const period = hour >= 12 ? "PM" : "AM";
+            const hour12 = hour % 12 || 12;
+
+            setFormData({ ...formData, closingHours: `${hour12}:${minute < 10 ? '0' + minute : minute} ${period}` })
+        } else {
+            setFormData({ ...formData, [e.target.id]: e.target.value })
+        }
     }
 
         useEffect(() => {
@@ -49,7 +83,7 @@ function Profile() {
     useEffect(() => {
         console.log('Form Data:', formData);
     }, [formData]);
-     */
+    */
 
     const [ errorMsg, setErrorMsg ] = useState('')
     const [ loading, setLoading ] = useState(false)
@@ -78,6 +112,7 @@ function Profile() {
             setLoading(false)
         }
     }
+
   return (
     <div className="flex w-full min-h-screen">
         <div className="w-[20%]">
@@ -110,13 +145,21 @@ function Profile() {
                     <h3 className="title text-[15px]">State</h3>
                     <p>{hospital.state}</p>
                 </div>
-                                <div className="">
+                <div className="">
                     <h3 className="title text-[15px]">City</h3>
                     <p>{hospital.city}</p>
                 </div>
                 <div className="">
                     <h3 className="title text-[15px]">Hospital Address</h3>
                     <p>{hospital.address}</p>
+                </div>
+                <div className="">
+                    <h3 className="title text-[15px]">Opening Days</h3>
+                    <p className="flex items-center gap-1">
+                        {hospital?.openingDays?.map((i, idx) => (
+                            <span key={idx}>{i}</span>
+                        ))}
+                    </p>
                 </div>
             </div>
 
@@ -168,6 +211,68 @@ function Profile() {
                     <label className='label text-green-500'>Address</label>
                     <div className="w-full mt-[-2px]">
                         <input className="input border-b-gray-300 focus:border-b-dark-blue" defaultValue={hospital.address} id={'address'} onChange={handleChange} type={'text'} />
+                    </div>
+                </div>
+
+                <div className="inputGroup mt-3 flex-col items-start justify-start gap-[-8px]">
+                    <label className='label text-green-500'>Opening Hours {`(${hospital?.openingHours || ''})`}</label>
+                    <div className="w-full mt-[-2px]">
+                        <input 
+                            className="input border-b-gray-300 focus:border-b-dark-blue" 
+                            defaultValue={hospital.openingHours} 
+                            id={'openingHours'} 
+                            onChange={handleChange} 
+                            type={'time'}
+                            name={'openingHours'}
+                        />
+                    </div>
+                </div>
+
+                <div className="inputGroup mt-3 flex-col items-start justify-start gap-[-8px]">
+                    <label className='label text-green-500'>Closing Hours {`(${hospital?.closingHours || ''})`}</label>
+                    <div className="w-full mt-[-2px]">
+                        <input 
+                            className="input border-b-gray-300 focus:border-b-dark-blue" 
+                            defaultValue={hospital.closingHours} 
+                            id={'closingHours'} 
+                            onChange={handleChange} 
+                            type={'time'}
+                            name={'closingHours'}
+                        />
+                    </div>
+                </div>
+
+                <div className="inputGroup mt-3 flex-col items-start justify-start gap-[-8px]">
+                    <label className='label text-green-500'>Opening Days</label>
+
+                    {/* Selected days with remove icon */}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {selectedDays.map(day => (
+                            <span key={day} className="flex items-center bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm">
+                                {day}
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoveDay(day)}
+                                    className="ml-2 text-green-600 hover:text-red-500"
+                                >
+                                    ✕
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+
+                    {/* Clickable day checkboxes */}
+                    <div className="flex flex-wrap gap-3 mt-2">
+                        {openingDaysArray.map(day => (
+                            <label key={day} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedDays.includes(day)}
+                                    onChange={() => handleDayToggle(day)}
+                                />
+                                <span className="text-sm">{day}</span>
+                            </label>
+                        ))}
                     </div>
                 </div>
 

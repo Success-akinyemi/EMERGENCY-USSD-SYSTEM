@@ -5,6 +5,39 @@ import jwt from 'jsonwebtoken'
 
 const MAX_LOGIN_ATTEMPTS = 4
 const SUSPENSION_TIME = 6 * 60 * 60 * 1000
+const openingDaysArray = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+function isValidOpeningDays(openingDays) {
+  if (!Array.isArray(openingDays)) {
+    return { success: false, data: 'Opening Days must be an array of days of the week' };
+  }
+
+  if (openingDays.length < 1) {
+    return { success: false, data: 'Opening days array cannot be empty' };
+  }
+
+  const validDaysSet = new Set(openingDaysArray.map(day => day.toLowerCase()));
+  const uniqueInput = [...new Set(openingDays.map(day => day.toLowerCase()))];
+
+  const invalidItems = uniqueInput.filter(day => !validDaysSet.has(day));
+
+  if (invalidItems.length > 0) {
+    return {
+      success: false,
+      data: `Invalid day(s): ${invalidItems.join(', ')}. Must match days of the week.`,
+    };
+  }
+
+  // Filter and format the days in the correct order
+  const formattedDays = openingDaysArray.filter(validDay =>
+    uniqueInput.includes(validDay.toLowerCase())
+  );
+
+  return {
+    success: true,
+    data: formattedDays,
+  };
+}
 
 //register hospital
 export async function register(req, res) {
@@ -214,7 +247,7 @@ export async function login(req, res) {
         res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
 
         // Send success response
-        const { password: _, blocked, verified, accountSuspended, noOfLoginAttempts, temporaryAccountBlockTime, ...hospitalData } = hospital._doc;
+        const { _id, password: _, blocked, verified, accountSuspended, noOfLoginAttempts, temporaryAccountBlockTime, ...hospitalData } = hospital._doc;
         //sendResponse(res, 200, true, hospitalData, 'Hospital logged in successfully');
         res.status(200).json({
             success: true,
@@ -278,8 +311,19 @@ export async function resetPassword(req, res) {
 //update hospital details
 export async function updateHospital(req, res) {
     const { hospitalId } = req.hospital 
-    const { name, phoneNumber, address, state, city, country, lat, lng, quickResponseMessage, profileImg } = req.body;
+    const { name, phoneNumber, address, state, city, country, lat, lng, quickResponseMessage, openingHours, closingHours, openingDays } = req.body;
     const { image } = req.files || {};
+    const timeFormat = /^(1[0-2]|[1-9]):[0-5][0-9] (AM|PM)$/i
+    if(openingHours && !timeFormat.test(openingHours)) return sendResponse(res, 400, false, null, `Opening Hours: ${openingHours} is not a valid opening hours e.g 10:00 AM - 5:00 PM`)
+    if(closingHours && !timeFormat.test(closingHours)) return sendResponse(res, 400, false, null, `Closing Hours: ${closingHours} is not a valid closing hours e.g 10:00 AM - 5:00 PM`)
+    let validateOpeningDays
+    if(openingDays){
+        if(!Array.isArray(openingDays)) return sendResponse(res, 400, false, null, 'Opening days must be an array')
+
+        validateOpeningDays = isValidOpeningDays(openingDays)
+        if(!validateOpeningDays.success) return sendResponse(res, 400, false, null, validateOpeningDays.data)
+
+    }
 
     try {
         let profileImgUrl
@@ -305,9 +349,13 @@ export async function updateHospital(req, res) {
         //if(country) hospital.country = country
         if(lat && lng) hospital.location = location
         if(quickResponseMessage) hospital.quickResponseMessage = quickResponseMessage
-        if(profileImgUrl) hospital.profileImg = profileImg
+        if(profileImgUrl) hospital.profileImg = profileImgUrl
+        if(openingHours) hospital.openingHours = openingHours
+        if(closingHours) hospital.closingHours = closingHours
+        if(openingDays) hospital.openingDays = validateOpeningDays.data
 
-        const { password: _, blocked, verified, accountSuspended, noOfLoginAttempts, temporaryAccountBlockTime, ...hospitalData } = hospital._doc;
+        hospital.save()
+        const { _id, password: _, blocked, verified, accountSuspended, noOfLoginAttempts, temporaryAccountBlockTime, ...hospitalData } = hospital._doc;
         sendResponse(res, 200, true, hospitalData, 'Hospital updated')
     } catch (error) {
         console.log('ERROR UPDATING HOSPITAL:', error);

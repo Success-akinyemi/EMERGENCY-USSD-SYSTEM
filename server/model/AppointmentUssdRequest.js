@@ -13,7 +13,7 @@ const AppointmentUssdRequestSchema = new mongoose.Schema({
     },
     sessionId: {
         type: String,
-        unique: true
+        //unique: true
     },
     notificationType: {
         type: String,

@@ -2,6 +2,7 @@ import mongoose from 'mongoose'
 import bcryptjs from 'bcryptjs'
 import jsonwebtoken from 'jsonwebtoken'
 import crypto from 'crypto'
+import { type } from 'os'
 
 const HospitalSchema = new mongoose.Schema({
     hospitalId: {
@@ -66,6 +67,27 @@ const HospitalSchema = new mongoose.Schema({
     quickResponseMessage: {
         type: String,
     },
+    openingHours: {
+        type: String,
+    },
+    closingHours: {
+        type: String,
+    },
+    openingDays: {
+        type: Array
+        //[Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
+    },
+    nextAvailablePeriod: [{
+        day: {
+            type: String,
+        },
+        nextAvailabletime: {
+            type: String
+        },
+        date: {
+            type: Date
+        }
+    }],
 
     verified: {
         type: Boolean,

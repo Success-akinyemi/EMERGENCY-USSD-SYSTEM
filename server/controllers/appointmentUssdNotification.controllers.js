@@ -40,7 +40,7 @@ export async function getAppointmentNotification(req, res) {
                 { attendedBy: hospitalId }
             ]
         })
-        .select('ussdRequestId phoneNumber message city state issue day time date status solved attendedBy')
+        .select('ussdRequestId message city state issue day time date status solved attendedBy')
         .lean();
 
         // Map for quick lookup
@@ -88,7 +88,7 @@ export async function getAnAppointmentNotification(req, res) {
         }
 
         const ussdRequest = await AppointmentUssdRequestModel.findOne({ ussdRequestId: notification.ussdRequestId })
-            .select('-__v -_id -text -serviceCode')
+            .select('-__v -_id -text -serviceCode -phoneNumber')
             .lean();
         if (!ussdRequest) {
             return sendResponse(res, 404, false, null, 'USSD request not found');
@@ -228,3 +228,5 @@ export async function rejectNotification(req, res) {
         return sendResponse(res, 500, false, null, 'Unable to reject request');
     }
 }
+
+//admin
