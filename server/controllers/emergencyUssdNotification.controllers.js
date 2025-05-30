@@ -3,6 +3,7 @@ import UssdNotificationModel from '../model/UssdNotification.js';
 import EmergencyUssdRequestModel from '../model/EmergencyUssdRequest.js';
 import AdminUssdNotificationModel from '../model/AdminUssdNotification.js';
 import moment from 'moment';
+import HospitalModel from '../model/Hospital.js';
 
 const ussdNotificationStatus = ['pending', 'accepted', 'rejected']
 

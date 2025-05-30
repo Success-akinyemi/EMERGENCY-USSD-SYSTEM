@@ -170,3 +170,16 @@ export async function rejectAppointRequest(formData){
         return res
     }
 }
+
+/**Add time to appointments for the day */
+export async function addAppointmentsTime(formData){
+    try {
+        const res = await axios.post('/hospital/appointment/addAppointmentTime', formData, {withCredentials: true})
+        if(res.data.success){
+            return res.data
+        }
+    } catch (error) {
+        const res = error.response.data || { success: false, message: 'Unable to add appointment time' }
+        return res
+    }
+}

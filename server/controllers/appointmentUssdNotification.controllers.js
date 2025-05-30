@@ -3,6 +3,7 @@ import UssdNotificationModel from '../model/UssdNotification.js';
 import AppointmentUssdRequestModel from '../model/AppointmentUssdRequest.js';
 import AdminUssdNotificationModel from '../model/AdminUssdNotification.js';
 import moment from 'moment';
+import HospitalModel from '../model/Hospital.js';
 
 const ussdNotificationStatus = ['pending', 'accepted', 'rejected']
 
@@ -262,6 +263,58 @@ export async function rejectNotification(req, res) {
     } catch (error) {
         console.error('UNABLE TO REJECTS USSD REQUEST', error);
         return sendResponse(res, 500, false, null, 'Unable to reject request');
+    }
+}
+
+export async function addAppointmentTime(req, res) {
+    const { hospitalId } = req.hospital;
+    const { time } = req.body;
+
+    if (!time || time < 1) {
+        return sendResponse(res, 400, false, null, 'Please enter a number of time greater than zero');
+    }
+
+    try {
+        const timeInHours = Number(time / 60); // e.g., 90 min => 1.5
+
+        const getHospital = await HospitalModel.findOne({ hospitalId });
+        if (!getHospital) {
+            return sendResponse(res, 404, false, null, 'Hospital not found');
+        }
+
+        const todayStart = moment().startOf('day').toDate();
+        const todayEnd = moment().endOf('day').toDate();
+
+        const appointmentsToday = await AppointmentUssdRequestModel.find({
+            hospitalId,
+            date: {
+                $gte: todayStart,
+                $lte: todayEnd
+            }
+        });
+
+        if (appointmentsToday.length === 0) {
+            return sendResponse(res, 200, true, null, 'No appointments found for today');
+        }
+
+        for (let appt of appointmentsToday) {
+            if (!appt.time) continue;
+
+            const timeString = appt.time.trim(); // e.g., "1:30 PM"
+            const fullDateTime = moment(`${moment().format('YYYY-MM-DD')} ${timeString}`, 'YYYY-MM-DD hh:mm A');
+
+            if (!fullDateTime.isValid()) continue;
+
+            const updatedTime = fullDateTime.add(timeInHours, 'hours');
+            appt.time = updatedTime.format('hh:mm A'); // Back to "1:30 PM" format
+            await appt.save();
+        }
+
+        return sendResponse(res, 200, true, null, `${appointmentsToday.length} appointments updated with +${timeInHours.toFixed(2)} hours`);
+
+    } catch (error) {
+        console.error('UNABLE TO ADD APPOINTMENTS TIME', error);
+        return sendResponse(res, 500, false, null, 'Unable to add appointment time to users');
     }
 }
 

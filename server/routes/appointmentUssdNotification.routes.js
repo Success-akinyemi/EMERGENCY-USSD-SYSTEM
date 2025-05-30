@@ -9,6 +9,7 @@ const router = express.Router()
 router.post('/markNotificationAsRead', AuthenticateHospital, VerifyAccount, controllers.markNotificationAsRead)
 router.post('/acceptRequest', AuthenticateHospital, VerifyAccount, controllers.acceptNotification)
 router.post('/rejectRequest', AuthenticateHospital, VerifyAccount, controllers.rejectNotification)
+router.post('/addAppointmentTime', AuthenticateHospital, VerifyAccount, controllers.addAppointmentTime)
 
 //GET
 router.get('/getUssdNotification', AuthenticateHospital, VerifyAccount, controllers.getAppointmentNotification)

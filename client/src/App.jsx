@@ -14,6 +14,7 @@ import Appointments from './Pages/Hospital/Appointments'
 import AcceptAppointment from './Components/Hospital/Modal/AcceptAppointment'
 import AdminDashboard from './Pages/Admin/Dashboard'
 import Appointment from './Pages/Hospital/Appointment'
+import AdjustTime from './Components/Hospital/Modal/AdjustTime'
 
 function App() {
     const [ selectedCard, setSelectedCard ] = useState()
@@ -53,6 +54,13 @@ function App() {
             return (
               <div>
                 <AcceptAppointment closePopup={closePopup} appointmentId={appointmentId} />
+              </div>
+            )
+
+            case 'adjustTime' : 
+            return (
+              <div>
+                <AdjustTime closePopup={closePopup} setSelectedCard={setSelectedCard} />
               </div>
             )
         }

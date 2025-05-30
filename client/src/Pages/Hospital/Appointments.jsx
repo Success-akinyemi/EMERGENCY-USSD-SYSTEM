@@ -6,6 +6,7 @@ import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { markAppointmentNotificationAsRead, rejectAppointRequest } from "../../Helpers/apis/hospital/apis";
 import { Link } from "react-router-dom";
+import { MdMoreTime } from "react-icons/md";
 
 function Appointments({ setSelectedCard, setAppointmentId }) {
     const hospitalData = useSelector((state) => state.hospital);
@@ -190,6 +191,10 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
         }
     };
 
+    const handleAdjustTime = () => {
+        setSelectedCard('adjustTime')
+    }
+
     return (
         <div className="flex w-full min-h-screen">
             <div className="w-[20%]">
@@ -314,6 +319,13 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
                                         </button>
                                     </div>
                                 )}
+                            <div
+                                onClick={handleAdjustTime}
+                                className="bg-dark-blue text-white px-2 py-1.5 rounded-[4px] min-w-[100px] text-center flex items-center justify-center"
+                            >
+                                <MdMoreTime className='text-white text-[18px]' />
+                                Adjust Appointment
+                            </div>
                         </div>
 
                         <div className="overflow-x-auto">
@@ -353,7 +365,7 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
                                                     </span>
                                                 ) : item?.ussdRequest?.status.toLowerCase() === 'rejected' ? (
                                                     <span
-                                                        onClick={() => handleAcceptRequest(item.notificationId)}
+                                                        onClick={() => handleAcceptRequest(item)}
                                                         className="btn2 py-1 px-1 bg-green-500 cursor-pointer"
                                                     >
                                                         Accept
@@ -361,7 +373,7 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
                                                 ) : (
                                                     <span className="flex gap-2">
                                                         <span
-                                                            onClick={() => handleAcceptRequest(item.notificationId)}
+                                                            onClick={() => handleAcceptRequest(item)}
                                                             className="btn2 py-1 px-1 bg-green-500 cursor-pointer"
                                                         >
                                                             Accept
