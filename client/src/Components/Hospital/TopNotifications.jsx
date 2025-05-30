@@ -19,13 +19,14 @@ function TopNotifications() {
   queryParams.append("read", 'false')
 
 
-  const { data, isFetching } = useFetchNotification(`?${queryParams.toString()}`);
+  const { data: notificationsData, isFetching } = useFetchNotification(`?${queryParams.toString()}`);
+
+  const data = notificationsData
 
   const totalPages = data?.data?.totalPages || 1;
-
   useEffect(() => {
     if (data?.data?.data) {
-      setNotifications(data.data.data);
+      setNotifications(data?.data?.data?.splice(0, 10));
       //console.log('notifications', data.data.data)
     }
   }, [data]);

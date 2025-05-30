@@ -2,27 +2,64 @@ import { sendResponse, sendSms } from '../middlewares/utils.js';
 import UssdNotificationModel from '../model/UssdNotification.js';
 import AppointmentUssdRequestModel from '../model/AppointmentUssdRequest.js';
 import AdminUssdNotificationModel from '../model/AdminUssdNotification.js';
+import moment from 'moment';
 
 const ussdNotificationStatus = ['pending', 'accepted', 'rejected']
 
+const allowedPeriods = ['today', '3days', '7days', '15days', '30days', 'allTime', 'custom']
 
 export async function getAppointmentNotification(req, res) {
     const { hospitalId } = req.hospital;
-    const { limit = 10, page = 1, read, status } = req.query;
+    const { limit = 10, page = 1, read, status, period, startDate, endDate } = req.query;
 
     if (read && read !== 'true' && read !== 'false') {
         return sendResponse(res, 400, false, null, 'Read must be a boolean value');
     }
 
+    if (period && !allowedPeriods.includes(period)) {
+        return sendResponse(res, 400, false, null, 'Invalid period value');
+    }
+
     try {
         const query = { hospitalId };
+
         if (read !== undefined) {
-            query.read = read;
+            query.read = read === 'true';
         }
-        if(status){
-            if(ussdNotificationStatus.includes(status.toLowerCase())){
-                query.status = status.toLowerCase();
+
+        if (status && ussdNotificationStatus.includes(status.toLowerCase())) {
+            query.status = status.toLowerCase();
+        }
+
+        // Handle date-based filtering
+        let dateFilter = {};
+        const now = new Date();
+
+        if (period === 'today') {
+            const startOfDay = new Date(now);
+            startOfDay.setHours(0, 0, 0, 0);
+            dateFilter = { $gte: startOfDay, $lte: now };
+        } else if (['3days', '7days', '15days', '30days'].includes(period)) {
+            const days = parseInt(period);
+            const fromDate = new Date(now);
+            fromDate.setDate(now.getDate() - days);
+            dateFilter = { $gte: fromDate, $lte: now };
+        } else if (period === 'custom') {
+            if (!startDate) {
+                return sendResponse(res, 400, false, null, 'Start date is required for custom period');
             }
+
+            const start = new Date(`${startDate}T00:00:00`);
+            const end = endDate ? new Date(`${endDate}T23:59:59`) : now;
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+                return sendResponse(res, 400, false, null, 'Invalid startDate or endDate');
+            }
+
+            dateFilter = { $gte: start, $lte: end };
+        }
+
+        if (period && period !== 'allTime') {
+            query.createdAt = dateFilter;
         }
 
         // Step 1: Get all matching notifications
@@ -32,7 +69,7 @@ export async function getAppointmentNotification(req, res) {
 
         const allUssdRequestIds = allNotifications.map(n => n.ussdRequestId);
 
-        // Step 2: Find only valid requests (not solved or attended by same hospital)
+        // Step 2: Find only valid requests
         const validUssdRequests = await AppointmentUssdRequestModel.find({
             ussdRequestId: { $in: allUssdRequestIds },
             $or: [
@@ -40,16 +77,15 @@ export async function getAppointmentNotification(req, res) {
                 { attendedBy: hospitalId }
             ]
         })
-        .select('ussdRequestId message city state issue day time date status solved attendedBy')
-        .lean();
+            .select('ussdRequestId message city state issue day time date status solved attendedBy')
+            .lean();
 
-        // Map for quick lookup
         const ussdMap = {};
         validUssdRequests.forEach(req => {
             ussdMap[req.ussdRequestId] = req;
         });
 
-        // Step 3: Filter notifications to those that have valid requests
+        // Step 3: Filter valid requests
         const filteredNotifications = allNotifications.filter(n => ussdMap[n.ussdRequestId]);
 
         const totalItems = filteredNotifications.length;

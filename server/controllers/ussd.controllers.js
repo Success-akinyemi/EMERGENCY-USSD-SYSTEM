@@ -10,12 +10,8 @@ import AppointmentUssdRequestModel from "../model/AppointmentUssdRequest.js";
 import { sendCustomNotification } from "./pushNotification.controllers.js";
 
  const ITEMS_PER_PAGE = 8;
- const HOSPITAL_COVERAGE_RANGE = 100 //100km
-
-function capitalizeFirstLetter(string) {
-    if (!string) return '';
-    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
-}
+ const HOSPITAL_COVERAGE_RANGE = 50 //50km
+ process.env.TZ = 'Africa/Lagos';
 
 function getDayName(date) {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -60,7 +56,12 @@ export async function ussd(req, res) {
     const responseLines = [];
     console.log('USSD Access:', text);
 
-    const notificationType = ['Emergency Alert', 'Book Appointment', 'Check Appointment', 'Cancel Appointment'];
+    const notificationType = [
+        'Emergency Alert', 
+        'Book Appointment', 
+        //'Check Appointment', 
+        //'Cancel Appointment'
+    ];
     const accidentTypes = ['Snake bite', 'Road Accident', 'Fire Accident', 'Water Accident', 'Others'];
     const allStates = await StateModel.find({ active: true }).select('state cities').lean();
     const stateNames = allStates.map(s => s.state);
@@ -714,41 +715,6 @@ export async function ussd(req, res) {
 }
 
 
-
-
-/**
- * 
-async function notifyNearbyHospitals(ussdRequest) {
-    const { lat, lng, ussdRequestId } = ussdRequest;
-
-    // 100 km radius, convert to radians (approx 6371km Earth radius)
-    const radiusInRadians = HOSPITAL_COVERAGE_RANGE / 6371;
-
-    const hospitals = await HospitalModel.find({
-        location: {
-            $geoWithin: {
-                $centerSphere: [[lng, lat], radiusInRadians]
-            }
-        }
-    }).select('_id hospitalId');
-    
-    console.log('hospitals123', hospitals)
-
-    if (!hospitals.length) return;
-
-    //const notificationId = await generateUniqueCode(9);
-
-    const notifications = await Promise.all(hospitals.map(async h => ({
-        hospitalId: h.hospitalId,
-        ussdRequestId,
-        notificationId: await generateUniqueCode(9)
-    })));
-    
-    console.log('NOTIFICATION', notifications)
-    await UssdNotificationModel.insertMany(notifications);
-}
- */
- 
 async function notifyNearbyHospitals(ussdRequest) {
     const { lat, lng, ussdRequestId } = ussdRequest;
 
@@ -809,24 +775,6 @@ async function notifyNearbyHospitals(ussdRequest) {
         }
     }
 }
-
-
-
-   // Helper function to calculate selected index
-   function getSelectedIndex(levels, maxLength) {
-       let page = 1;
-       let index = 0;
-       
-       for (const level of levels) {
-           if (level === '9') {
-               page++;
-           } else {
-               index = (page - 1) * ITEMS_PER_PAGE + parseInt(level) - 1;
-           }
-       }
-       
-       return index >= maxLength ? -1 : index;
-   }
 
 
 

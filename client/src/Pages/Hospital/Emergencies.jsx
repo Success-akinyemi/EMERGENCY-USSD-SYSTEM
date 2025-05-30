@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Sidebar from "../../Components/Hospital/Sidebar";
 import { useFetchNotification } from "../../Helpers/apis/hospital/fetch";
 import Spinner from "../../Components/Helpers/Spinner";
@@ -6,277 +6,428 @@ import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { acceptRequest, markNotificationAsRead, rejectRequest } from "../../Helpers/apis/hospital/apis";
 
-function Emergencies() {
-    const hospitalData  = useSelector((state) => state.hospital);
-    const hospital = hospitalData?.currentUser
+import { Link } from "react-router-dom";
 
-  const [notifications, setNotifications] = useState([]);
-  const [page, setPage] = useState(1);
-  const [readFilter, setReadFilter] = useState("all");
+function Emergencies({ setSelectedCard, setAppointmentId }) {
+    const hospitalData = useSelector((state) => state.hospital);
+    const hospital = hospitalData?.currentUser;
+
+    const [notifications, setNotifications] = useState([]);
+    const [page, setPage] = useState(1);
+    const [readFilter, setReadFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState();
-    const [ showStatusMenu, setShowStatusMenu ] = useState(false)
+    const [showStatusMenu, setShowStatusMenu] = useState(false);
+    const [dateFilter, setDateFilter] = useState('allTime');
+    const [showDateFilter, setShowDateFilter] = useState(false);
+    const [showDateCalender, setShowDateCalender] = useState(false);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [appliedStartDate, setAppliedStartDate] = useState('');
+    const [appliedEndDate, setAppliedEndDate] = useState('');
+    const [marking, setMarking] = useState(false);
+    const [ acceptingRequest, setAcceptingRequest ] = useState(false)
+    const [rejectingRequest, setRejectingRequest] = useState(false);
 
     const handleStatusFilter = (data) => {
-        if(data) {
-            setStatusFilter(data)
-            setShowStatusMenu(!showStatusMenu)
-        } else {
-            setStatusFilter()
-            setShowStatusMenu(!showStatusMenu)
+        setStatusFilter(data || undefined);
+        setShowStatusMenu(false);
+    };
+
+    const toggleDateFilter = () => {
+        setShowDateFilter(!showDateFilter);
+        if (showDateCalender) {
+            setShowDateCalender(false);
+        }
+    };
+
+    const handleDateFilter = (data) => {
+        setDateFilter(data);
+        setShowDateFilter(false);
+        if (data === 'custom') {
+            setShowDateCalender(true);
+        }
+    };
+
+    const handleCustomDate = () => {
+        if (!startDate) {
+            toast.error('Start date is required');
+            return;
+        }
+        setAppliedStartDate(startDate);
+        setAppliedEndDate(endDate);
+        setShowDateCalender(false);
+    };
+
+    const queryString = useMemo(() => {
+        const params = new URLSearchParams();
+        params.append("page", page);
+
+        if (readFilter !== "all") params.append("read", readFilter);
+        if (statusFilter) params.append("status", statusFilter);
+
+        if (dateFilter === "custom") {
+            params.append("period", "custom");
+            if (appliedStartDate) params.append("startDate", appliedStartDate);
+            if (appliedEndDate) params.append("endDate", appliedEndDate);
+        }
+        else if (dateFilter !== "allTime") {
+            params.append("period", dateFilter);
+        }
+
+        return params.toString();
+    }, [page, readFilter, statusFilter, dateFilter, appliedStartDate, appliedEndDate]);
+
+    const { data, isFetching } = useFetchNotification(`?${queryString}`);
+    const totalPages = data?.data?.totalPages || 1;
+    console.log('data', data)
+    useEffect(() => {
+        if (data?.data?.data) {
+            setNotifications(data.data.data);
+        }
+    }, [data]);
+
+    const handlePageChange = (newPage) => {
+        if (newPage > 0 && newPage <= totalPages) setPage(newPage);
+    };
+
+    const renderPagination = () => {
+        if (totalPages <= 6) {
+            return [...Array(totalPages)].map((_, idx) => (
+                <button
+                    key={idx}
+                    onClick={() => setPage(idx + 1)}
+                    className={`px-2 py-1 border mx-1 ${page === idx + 1 ? "bg-dark-blue text-white" : ""}`}
+                >
+                    {idx + 1}
+                </button>
+            ));
+        }
+
+        const pages = [
+            <button key="prev" onClick={() => handlePageChange(page - 1)} disabled={page === 1}>
+                {"<"}
+            </button>
+        ];
+
+        pages.push(...[1, 2, 3].map((p) => (
+            <button key={p} onClick={() => setPage(p)} className={`px-2 py-1 mx-1 border ${page === p ? "bg-dark-blue text-white" : ""}`}>
+                {p}
+            </button>
+        )));
+
+        if (page > 5) pages.push(<span key="dots1">...</span>);
+
+        if (page > 3 && page < totalPages - 2) {
+            pages.push(
+                <button key="current" className="px-2 py-1 mx-1 border bg-dark-blue text-white" disabled>
+                    {page}
+                </button>
+            );
+        }
+
+        if (page < totalPages - 4) pages.push(<span key="dots2">...</span>);
+
+        pages.push(...[totalPages - 2, totalPages - 1, totalPages].map((p) => (
+            <button key={p} onClick={() => setPage(p)} className={`px-2 py-1 mx-1 border ${page === p ? "bg-dark-blue text-white" : ""}`}>
+                {p}
+            </button>
+        )));
+
+        pages.push(
+            <button key="next" onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}>
+                {">"}
+            </button>
+        );
+
+        return pages;
+    };
+
+    const handleMarkAsRead = async (notificationId) => {
+        if (!hospital?.hospitalId) return toast.error('Hospital information missing');
+        if (!notificationId) return toast.error('Notification ID required');
+        if (marking) return;
+
+        try {
+            setMarking(true);
+            const res = await markNotificationAsRead({
+                hospitalId: hospital.hospitalId,
+                notificationId
+            });
+            if (res.success) {
+                toast.success(res.message);
+                window.location.reload();
+            } else {
+                toast.error(res.message);
+            }
+        } catch (error) {
+            toast.error(`Error marking notification as read`);
+        } finally {
+            setMarking(false);
+        }
+    };
+
+    //accept ussd req
+    const handleAcceptRequest = async (notificationId) => {
+        if(!notificationId) return toast.error('Notification Id is required')
+        if(acceptingRequest) return
+        const formData = { notificationId }
+
+        try {
+            setAcceptingRequest(true)
+            //console.log('formData', formData)
+            const res = await acceptRequest(formData)
+            if(res.success){
+                toast.success(res.message)
+                window.location.reload()
+            }else {
+                toast.error(res.message)
+            }
+        } catch (error) {
+            console.log('error', error)
+            toast.error(`Unable to accept Emergency ${notificationId}`)
+        } finally {
+            setAcceptingRequest(false)
         }
     }
 
-    //read status
-  const queryParams = new URLSearchParams();
-  queryParams.append("page", page);
-  if (readFilter !== "all") queryParams.append("read", readFilter);
+    //reject ussd req
+    const handleRejectRequest = async (notificationId) => {
+        if(!notificationId) return toast.error('Notification Id is required')
+        if(rejectingRequest) return
+        const formData = { notificationId }
 
-    //accepted status
-  const statusQueryParams = new URLSearchParams();
-  statusQueryParams.append("status", statusFilter);
-  if (statusFilter === "") statusQueryParams.append("status", '');
-
-
-  const { data, isFetching } = useFetchNotification(`?${queryParams.toString()}&${statusQueryParams.toString()}`);
-
-  const totalPages = data?.data?.totalPages || 1;
-
-  useEffect(() => {
-    if (data?.data?.data) {
-      setNotifications(data.data.data);
-      //console.log('notifications', data.data.data)
-    }
-  }, [data]);
-
-  const handlePageChange = (newPage) => {
-    if (newPage > 0 && newPage <= totalPages) setPage(newPage);
-  };
-
-  const renderPagination = () => {
-    if (totalPages <= 6) {
-      return [...Array(totalPages)].map((_, idx) => (
-        <button
-          key={idx}
-          onClick={() => setPage(idx + 1)}
-          className={`px-2 py-1 border mx-1 ${page === idx + 1 ? "bg-dark-blue text-white" : ""}`}
-        >
-          {idx + 1}
-        </button>
-      ));
-    }
-
-    const pages = [];
-
-    pages.push(
-      <button key="prev" onClick={() => handlePageChange(page - 1)} disabled={page === 1}>
-        {"<"}
-      </button>
-    );
-
-    pages.push(
-      ...[1, 2, 3].map((p) => (
-        <button key={p} onClick={() => setPage(p)} className={`px-2 py-1 mx-1 border ${page === p ? "bg-dark-blue text-white" : ""}`}>
-          {p}
-        </button>
-      ))
-    );
-
-    if (page > 5) pages.push(<span key="dots1">...</span>);
-
-    if (page > 3 && page < totalPages - 2) {
-      pages.push(
-        <button key="current" className="px-2 py-1 mx-1 border bg-dark-blue text-white" disabled>
-          {page}
-        </button>
-      );
-    }
-
-    if (page < totalPages - 4) pages.push(<span key="dots2">...</span>);
-
-    pages.push(
-      ...[totalPages - 2, totalPages - 1, totalPages].map((p) => (
-        <button key={p} onClick={() => setPage(p)} className={`px-2 py-1 mx-1 border ${page === p ? "bg-dark-blue text-white" : ""}`}>
-          {p}
-        </button>
-      ))
-    );
-
-    pages.push(
-      <button key="next" onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}>
-        {">"}
-      </button>
-    );
-
-    return pages;
-  };
-
-  //apis
-  const [ marking, setMarking ] = useState(false)
-  const handleMarkAsRead = async (hospitalId, notificationId) => {
-    if(!hospitalId) return toast.error('Hospital Id is required')
-    if(!notificationId) return toast.error('Notification Id is required')
-    if(marking) return
-    const formData = { hospitalId, notificationId }
-    try {
-        setMarking(true)
-        //console.log('formData', formData)
-        const res = await markNotificationAsRead(formData)
-        if(res.success){
-            toast.success(res.message)
-            window.location.reload()
-        }else {
-            toast.error(res.message)
+        try {
+            setRejectingRequest(true)
+            //console.log('formData', formData)
+            const res = await rejectRequest(formData)
+            if(res.success){
+                toast.success(res.message)
+                window.location.reload()
+            }else {
+                toast.error(res.message)
+            }
+        } catch (error) {
+            toast.error(`Unable to reject emergency Notification ${notificationId}`)
+        } finally {
+            setRejectingRequest(false)
         }
-    } catch (error) {
-        toast.error(`Unable to mark Emergency ${notificationId} as read`)
-    } finally {
-        setMarking(false)
     }
-  }
 
-  //accept ussd req
-  const [ acceptingRequest, setAcceptingRequest ] = useState(false)
-  const handleAcceptRequest = async (hospitalId, notificationId) => {
-    if(!notificationId) return toast.error('Notification Id is required')
-    if(acceptingRequest) return
-    const formData = { notificationId }
+    return (
+        <div className="flex w-full min-h-screen">
+            <div className="w-[20%]">
+                <Sidebar />
+            </div>
 
-    try {
-        setAcceptingRequest(true)
-        //console.log('formData', formData)
-        const res = await acceptRequest(formData)
-        if(res.success){
-            toast.success(res.message)
-            window.location.reload()
-        }else {
-            toast.error(res.message)
-        }
-    } catch (error) {
-        console.log('error', error)
-        toast.error(`Unable to accept Emergency ${notificationId}`)
-    } finally {
-        setAcceptingRequest(false)
-    }
-  }
+            <div className="w-[80%]">
+                {isFetching ? (
+                    <div className="flex items-center justify-center h-screen">
+                        <Spinner borderColor={"#142140"} />
+                    </div>
+                ) : (
+                    <div className="page">
+                        <h1 className="title">Emergency Ussd Notifications</h1>
 
-  //reject ussd req
-  const [ rejectingRequest, setRejectingRequest ] = useState(false)
-  const handleRejectRequest = async (hospitalId, notificationId) => {
-    if(!notificationId) return toast.error('Notification Id is required')
-    if(rejectingRequest) return
-    const formData = { notificationId }
+                        <div className="flex justify-end my-4 gap-4">
+                            <div className="flex gap-4">
+                                <button
+                                    className={`py-2 px-2 rounded-[4px] cursor-pointer ${readFilter === 'all' ? 'bg-dark-blue text-white' : 'bg-white border-[1px] text-dark-blue'}`}
+                                    onClick={() => setReadFilter("all")}
+                                >
+                                    All
+                                </button>
+                                <button
+                                    className={`py-2 px-2 rounded-[4px] cursor-pointer ${readFilter === 'true' ? 'bg-dark-blue text-white' : 'bg-white border-[1px] text-dark-blue'}`}
+                                    onClick={() => setReadFilter("true")}
+                                >
+                                    Read
+                                </button>
+                                <button
+                                    className={`py-2 px-2 rounded-[4px] cursor-pointer ${readFilter === 'false' ? 'bg-dark-blue text-white' : 'bg-white border-[1px] text-dark-blue'}`}
+                                    onClick={() => setReadFilter("false")}
+                                >
+                                    Unread
+                                </button>
+                            </div>
 
-    try {
-        setRejectingRequest(true)
-        //console.log('formData', formData)
-        const res = await rejectRequest(formData)
-        if(res.success){
-            toast.success(res.message)
-            window.location.reload()
-        }else {
-            toast.error(res.message)
-        }
-    } catch (error) {
-        toast.error(`Unable to reject Notification ${notificationId}`)
-    } finally {
-        setRejectingRequest(false)
-    }
-  }
-
-
-  return (
-      <div className="flex w-full min-h-screen">
-          <div className="w-[20%]">
-              <Sidebar />
-          </div>
-
-          <div className="w-[80%]">
-              {isFetching ? (
-                  <div className="flex items-center justify-center h-screen">
-                      <Spinner borderColor={"#142140"} />
-                  </div>
-              ) : (
-                  <div className="max-small-phone:px-2 max-phone:px-2 px-4">
-                      <h1 className="title">Emergency Ussd Notifications</h1>
-
-                    <div className="flex justify-end my-4 gap-4">
-                      {/*Read Filter Buttons */}
-                      <div className="flex gap-4">
-                          <button className={`py-2 px-2 rounded-[4px] cursor-pointer ${readFilter === 'all' ? 'bg-dark-blue text-white' : 'bg-white border-[1px] text-dark-blue'}`} variant={readFilter === "all" ? "default" : "outline"} onClick={() => setReadFilter("all")}>
-                              All
-                          </button>
-                          <button className={`py-2 px-2 rounded-[4px] cursor-pointer ${readFilter === 'true' ? 'bg-dark-blue text-white' : 'bg-white border-[1px] text-dark-blue'}`} variant={readFilter === "true" ? "default" : "outline"} onClick={() => setReadFilter("true")}>
-                              Read
-                          </button>
-                          <button className={`py-2 px-2 rounded-[4px] cursor-pointer ${readFilter === 'false' ? 'bg-dark-blue text-white' : 'bg-white border-[1px] text-dark-blue'}`} variant={readFilter === "false" ? "default" : "outline"} onClick={() => setReadFilter("false")}>
-                              Unread
-                          </button>
-                      </div>
-
-                      {/**STATUS FILTER BUTTONS */}
-                        <div className="relative">
-                            <div onClick={() => setShowStatusMenu(!showStatusMenu)} className="bg-dark-blue text-white px-1 py-1.5 rounded-[4px] min-w-[100px]">{statusFilter || 'All'}</div>
-                            {
-                                showStatusMenu && (
-                                    <div className={`flex flex-col bg-white border-[2px] border-dark-blue py-3 px-1 rounded-[4px] absolute mt-1`}>
-                                        <div onClick={() => handleStatusFilter(``)} className={`text-dark-blue text-[15px] font-semibold cursor-pointer py-1 px-1.5 rounded-[4px] hover:text-white hover:bg-dark-blue transition-all duration-100 ${statusFilter === '' && 'bg-dark-blue text-white'}`}>All</div>
-                                        <div onClick={() => handleStatusFilter(`Pending`)} className={`text-dark-blue text-[15px] font-semibold cursor-pointer py-1 px-1.5 rounded-[4px] hover:text-white hover:bg-dark-blue transition-all duration-100 ${statusFilter === 'Pending' && 'bg-dark-blue text-white'}`}>Pending</div>
-                                        <div onClick={() => handleStatusFilter(`Accepted`)} className={`text-dark-blue text-[15px] font-semibold cursor-pointer py-1 px-1.5 rounded-[4px] hover:text-white hover:bg-dark-blue transition-all duration-100 ${statusFilter === 'Accepted' && 'bg-dark-blue text-white'}`}>Accepted</div>
-                                        <div onClick={() => handleStatusFilter(`Rejected`)} className={`text-dark-blue text-[15px] font-semibold cursor-pointer py-1 px-1.5 rounded-[4px] hover:text-white hover:bg-dark-blue transition-all duration-100 ${statusFilter === 'Rejected' && 'bg-dark-blue text-white'}`}>Rejected</div>
+                            <div className="relative">
+                                <div
+                                    onClick={() => setShowStatusMenu(!showStatusMenu)}
+                                    className="bg-dark-blue text-white px-1 py-1.5 rounded-[4px] min-w-[100px] text-center"
+                                >
+                                    {statusFilter || 'Status'}
+                                </div>
+                                {showStatusMenu && (
+                                    <div className="flex flex-col bg-white border-[2px] border-dark-blue py-3 px-1 rounded-[4px] absolute mt-1 z-10">
+                                        <div
+                                            onClick={() => handleStatusFilter(``)}
+                                            className={`text-dark-blue text-[15px] font-semibold cursor-pointer py-1 px-1.5 rounded-[4px] hover:text-white hover:bg-dark-blue transition-all duration-100 ${!statusFilter && 'bg-dark-blue text-white'}`}
+                                        >
+                                            All
+                                        </div>
+                                        <div
+                                            onClick={() => handleStatusFilter(`Pending`)}
+                                            className={`text-dark-blue text-[15px] font-semibold cursor-pointer py-1 px-1.5 rounded-[4px] hover:text-white hover:bg-dark-blue transition-all duration-100 ${statusFilter === 'Pending' && 'bg-dark-blue text-white'}`}
+                                        >
+                                            Pending
+                                        </div>
+                                        <div
+                                            onClick={() => handleStatusFilter(`Accepted`)}
+                                            className={`text-dark-blue text-[15px] font-semibold cursor-pointer py-1 px-1.5 rounded-[4px] hover:text-white hover:bg-dark-blue transition-all duration-100 ${statusFilter === 'Accepted' && 'bg-dark-blue text-white'}`}
+                                        >
+                                            Accepted
+                                        </div>
+                                        <div
+                                            onClick={() => handleStatusFilter(`Rejected`)}
+                                            className={`text-dark-blue text-[15px] font-semibold cursor-pointer py-1 px-1.5 rounded-[4px] hover:text-white hover:bg-dark-blue transition-all duration-100 ${statusFilter === 'Rejected' && 'bg-dark-blue text-white'}`}
+                                        >
+                                            Rejected
+                                        </div>
                                     </div>
-                                )
-                            }
+                                )}
+                            </div>
+
+                            <div className="relative">
+                                <div
+                                    onClick={toggleDateFilter}
+                                    className="bg-dark-blue text-white px-1 py-1.5 rounded-[4px] min-w-[100px] text-center"
+                                >
+                                    {dateFilter === 'custom' && appliedStartDate ? 'Custom' : dateFilter}
+                                </div>
+                                {showDateFilter && (
+                                    <div className="flex flex-col bg-white border-[2px] border-dark-blue py-3 px-1 rounded-[4px] absolute mt-1 z-10">
+                                        {['today', '3days', '7days', '15days', '30days', 'allTime', 'custom'].map((filter) => (
+                                            <div
+                                                key={filter}
+                                                onClick={() => handleDateFilter(filter)}
+                                                className={`text-dark-blue text-[15px] font-semibold cursor-pointer py-1 px-1.5 rounded-[4px] hover:text-white hover:bg-dark-blue ${dateFilter === filter && 'bg-dark-blue text-white'}`}
+                                            >
+                                                {filter === 'allTime' ? 'All Time' : filter}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                                {showDateCalender && (
+                                    <div className="flex flex-col bg-white border-[2px] border-dark-blue py-2 px-2 rounded-[4px] absolute mt-10 z-20 w-[250px] ml-auto">
+                                        <label className="text-xs text-gray-600">Start Date</label>
+                                        <input
+                                            type="date"
+                                            value={startDate}
+                                            max={new Date().toISOString().split('T')[0]}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                            className="border p-1 mb-2 rounded"
+                                        />
+
+                                        <label className="text-xs text-gray-600">End Date</label>
+                                        <input
+                                            type="date"
+                                            max={new Date().toISOString().split('T')[0]}
+                                            min={startDate}
+                                            value={endDate}
+                                            onChange={(e) => setEndDate(e.target.value)}
+                                            className="border p-1 rounded"
+                                        />
+
+                                        <button
+                                            onClick={handleCustomDate}
+                                            className="btn2 mt-4 text-center"
+                                        >
+                                            Apply
+                                        </button>
+                                    </div>
+                                )}
                         </div>
 
-                    </div>
-
-                      {/* Notification Table */}
-                      <div className="overflow-x-auto">
-                          <table className="w-full table-auto border-collapse border border-dark-blue mt-4">
-                              <thead>
-                                  <tr className="bg-dark-blue text-white">
-                                      <th className="p-2 border border-dark-blue text-left">Notification ID</th>
-                                      <th className="p-2 border border-dark-blue text-left">Request ID</th>
-                                      <th className="p-2 border border-dark-blue text-left">Message</th>
-                                      <th className="p-2 border border-dark-blue text-left">Read Status</th>
-                                      <th className="p-2 border border-dark-blue text-left">Status</th>
-                                      <th className="p-2 border border-dark-blue text-left"></th>
-                                  </tr>
-                              </thead>
-                              <tbody>
-                                  {notifications?.map((item, i) => (
-                                      <tr key={i} className="border-t border-dark-blue">
-                                          <td className="p-2 border border-dark-blue">{item?.notificationId}</td>
-                                          <td className="p-2 border border-dark-blue">{item?.ussdRequestId}</td>
-                                          <td className="p-2 border border-dark-blue">{item?.ussdRequest?.message || "-"}</td>
-                                          <td className="p-2 border border-dark-blue">{item?.read ? "Read" : <span onClick={() => handleMarkAsRead(hospital.hospitalId, item.notificationId)} className="cursor-pointer">Mark as Read</span>}</td>
-                                          <td className="p-2 border border-dark-blue">{item?.ussdRequest?.status || "-"}</td>
-                                          <td className="p-2 border border-dark-blue">
-                                            {
-                                                    item?.status.toLowerCase() === 'accepted' 
-                                                    ? 
-                                                    <span className="btn2 py-1 px-1 bg-green-500 cursor-not-allowed">Accepted</span> 
-                                                    :
-                                                    item?.status.toLowerCase() === 'rejected'
-                                                    ?
-                                                    <span onClick={() => handleAcceptRequest(hospital.hospitalId, item.notificationId)} className="btn2 py-1 px-1 bg-green-500">Accept</span>
-                                                    :
-                                                    <span className=""> <span onClick={() => handleAcceptRequest(hospital.hospitalId, item.notificationId)} className="btn2 py-1 px-1 bg-green-500">Accept</span>  <span onClick={() => handleRejectRequest(hospital.hospitalId, item.notificationId)} className="btn2 py-1 px-1 bg-red-500">Reject</span> </span>
-                                            }
+                        <div className="overflow-x-auto">
+                            <table className="w-full table-auto border-collapse border border-dark-blue mt-4">
+                                <thead>
+                                    <tr className="bg-dark-blue text-white">
+                                        <th className="p-2 border border-dark-blue text-left">Notification ID</th>
+                                        <th className="p-2 border border-dark-blue text-left">Request ID</th>
+                                        <th className="p-2 border border-dark-blue text-left">Message</th>
+                                        <th className="p-2 border border-dark-blue text-left">Read Status</th>
+                                        <th className="p-2 border border-dark-blue text-left">Status</th>
+                                        <th className="p-2 border border-dark-blue text-left">Actions</th>
+                                        {/**
+                                         * 
+                                        <th className="p-2 border border-dark-blue text-left">Details</th>
+                                         */}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {notifications?.map((item) => (
+                                        <tr key={item.notificationId} className="border-t border-dark-blue">
+                                            <td className="p-2 border border-dark-blue">{item?.notificationId}</td>
+                                            <td className="p-2 border border-dark-blue">{item?.ussdRequestId}</td>
+                                            <td className="p-2 border border-dark-blue">{item?.ussdRequest?.message || "-"}</td>
+                                            <td className="p-2 border border-dark-blue">
+                                                {item?.read ? "Read" : (
+                                                    <span
+                                                        onClick={() => handleMarkAsRead(item.notificationId)}
+                                                        className="cursor-pointer hover:underline"
+                                                    >
+                                                        Mark as Read
+                                                    </span>
+                                                )}
                                             </td>
-                                      </tr>
-                                  ))}
-                              </tbody>
-                          </table>
-                      </div>
+                                            <td className="p-2 border border-dark-blue">{item?.ussdRequest?.status || "-"}</td>
+                                            <td className="p-2 border border-dark-blue">
+                                                {item?.status.toLowerCase() === 'accepted' ? (
+                                                    <span className="btn2 py-1 px-1 bg-green-500 cursor-not-allowed">
+                                                        Accepted
+                                                    </span>
+                                                ) : item?.status.toLowerCase() === 'rejected' ? (
+                                                    <span
+                                                        onClick={() => handleAcceptRequest(item.notificationId)}
+                                                        className="btn2 py-1 px-1 bg-green-500 cursor-pointer"
+                                                    >
+                                                        Accept
+                                                    </span>
+                                                ) : (
+                                                    <span className="flex gap-2">
+                                                        <span
+                                                            onClick={() => handleAcceptRequest(item.notificationId)}
+                                                            className="btn2 py-1 px-1 bg-green-500 cursor-pointer"
+                                                        >
+                                                            Accept
+                                                        </span>
+                                                        <span
+                                                            onClick={() => handleRejectRequest(item.notificationId)}
+                                                            className="btn2 py-1 px-1 bg-red-500 cursor-pointer"
+                                                        >
+                                                            Reject
+                                                        </span>
+                                                    </span>
+                                                )}
+                                            </td>
+                                            {
+                                                /**
+                                                 * 
+                                            <td className="p-2 border border-dark-blue">
+                                                <Link
+                                                    to={`/hospital/appointment/${item?.notificationId}`}
+                                                    className="text-[14px] font-semibold hover:underline"
+                                                >
+                                                    View
+                                                </Link>
+                                            </td>
+                                                 */
+                                            }
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
 
-                      {/* Pagination UI */}
-                      <div className="flex justify-center mt-6 space-x-2">{renderPagination()}</div>
-                  </div>
-              )}
-          </div>
-      </div>
-  );
+                        <div className="flex justify-center mt-6 space-x-2">
+                            {renderPagination()}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 }
 
 export default Emergencies;

@@ -25,8 +25,8 @@ function AcceptAppointment({ appointmentId }) {
     const [ acceptingRequest, setAcceptingRequest ] = useState(false)
     const handleAcceptRequest = async (hospitalId, notificationId) => {
     if(!formData?.notificationId) return toast.error('Notification Id is required')
-    if(!formData?.date) return toast.error('Appointment Date is required')
-    if(!formData?.time) return toast.error('Appointment Day is required')
+    if(!appointmentId?.ussdRequest?.date && !formData?.date) return toast.error('Appointment Date is required')
+    if(!appointmentId?.ussdRequest?.time && !formData?.time) return toast.error('Appointment Day is required')
 
     if(acceptingRequest) return
 
@@ -71,19 +71,43 @@ function AcceptAppointment({ appointmentId }) {
             </div>
 
             <div className="flex  flex-col gap-1.5">
-                <h1 className="title text-[17px]">Enter Date:</h1>
+                <h1 className="title text-[17px]">
+                    Enter Date:
+                    <span>
+                        {
+                            appointmentId?.ussdRequest?.date && (
+                                new Date(appointmentId?.ussdRequest?.date).toLocaleDateString('en-US', {
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                })
+                            )
+                        }
+                    </span>
+                </h1>
                 <input 
                     type="date" 
                     name="date" 
                     id="date" 
+                    defaultValue={appointmentId?.ussdRequest?.date}
                     onChange={handleChange} 
                     min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
                 />
             </div>
 
             <div className="flex  flex-col gap-1.5">
-                <h1 className="title text-[17px]">Enter Time:</h1>
-                <input type="time" name="time" id="time" onChange={handleChange} />
+                <h1 className="title text-[17px]">
+                    Enter Time:
+                    <span>{appointmentId?.ussdRequest?.time || ''}</span>
+                </h1>
+                <input 
+                    type="time" 
+                    name="time" 
+                    id="time" 
+                    onChange={handleChange}
+                    defaultValue={appointmentId?.ussdRequest?.time}
+                />
             </div>
         </div>
 
