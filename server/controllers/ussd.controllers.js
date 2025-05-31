@@ -697,7 +697,7 @@ export async function ussd(req, res) {
             responseLines.push(
             `END Appointment confirmed!\n` +
             `State: ${tempRequest.state}\n` +
-            `City: ${tempRequest.city}\n` +
+            //`City: ${tempRequest.city}\n` +
             `Issue: ${tempRequest.issue}\n` +
             `Hospital: ${hospital.name}\n` +
             `Date: ${formattedDate} at ${formattedTime}\n` +

@@ -26,6 +26,8 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
     const [appliedEndDate, setAppliedEndDate] = useState('');
     const [marking, setMarking] = useState(false);
     const [rejectingRequest, setRejectingRequest] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
 
     const handleStatusFilter = (data) => {
         setStatusFilter(data || undefined);
@@ -57,6 +59,16 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
         setShowDateCalender(false);
     };
 
+    const handleSearch = () => {
+        setAppliedSearchTerm(searchTerm);
+        setPage(1);
+    }
+
+    const handleSearchClear = () => {
+        setAppliedSearchTerm();
+        setSearchTerm('')
+    }
+
     const queryString = useMemo(() => {
         const params = new URLSearchParams();
         params.append("page", page);
@@ -73,8 +85,13 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
             params.append("period", dateFilter);
         }
 
+        //serach term
+        if (appliedSearchTerm) {
+            params.append("search", appliedSearchTerm);
+        }
+
         return params.toString();
-    }, [page, readFilter, statusFilter, dateFilter, appliedStartDate, appliedEndDate]);
+    }, [page, readFilter, statusFilter, dateFilter, appliedStartDate, appliedEndDate, appliedSearchTerm]);
 
     const { data, isFetching } = useFetchAppointments(`?${queryString}`);
     const totalPages = data?.data?.totalPages || 1;
@@ -210,7 +227,29 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
                     <div className="page">
                         <h1 className="title">Appointments Ussd Notifications</h1>
 
-                        <div className="flex justify-end my-4 gap-4">
+                        <div className="flex justify-end my-4 gap-4 w-full">
+                            <div className="flex mr-auto">
+                                <input 
+                                    type="text" 
+                                    placeholder="Search by request Id" 
+                                    className="input p-0" 
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSearch();
+                                    }}
+                                />
+                                <div className="flex items-center gap-1.5">
+                                    <div className="btn2" onClick={handleSearch}>Search</div>
+                                    {
+                                        searchTerm && (
+                                            <div className="btn2" onClick={() => handleSearchClear()} >Clear</div>
+                                        )
+                                    }
+                                </div>
+                            </div>
+
+                            {/**RIGHT SIDE */}
                             <div className="flex gap-4">
                                 <button
                                     className={`py-2 px-2 rounded-[4px] cursor-pointer ${readFilter === 'all' ? 'bg-dark-blue text-white' : 'bg-white border-[1px] text-dark-blue'}`}
@@ -332,11 +371,11 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
                             <table className="w-full table-auto border-collapse border border-dark-blue mt-4">
                                 <thead>
                                     <tr className="bg-dark-blue text-white">
-                                        <th className="p-2 border border-dark-blue text-left">Notification ID</th>
                                         <th className="p-2 border border-dark-blue text-left">Request ID</th>
                                         <th className="p-2 border border-dark-blue text-left">Message</th>
                                         <th className="p-2 border border-dark-blue text-left">Read Status</th>
                                         <th className="p-2 border border-dark-blue text-left">Status</th>
+                                        <th className="p-2 border border-dark-blue text-left">Date</th>
                                         <th className="p-2 border border-dark-blue text-left">Actions</th>
                                         <th className="p-2 border border-dark-blue text-left">Details</th>
                                     </tr>
@@ -344,7 +383,6 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
                                 <tbody>
                                     {notifications?.map((item) => (
                                         <tr key={item.notificationId} className="border-t border-dark-blue">
-                                            <td className="p-2 border border-dark-blue">{item?.notificationId}</td>
                                             <td className="p-2 border border-dark-blue">{item?.ussdRequestId}</td>
                                             <td className="p-2 border border-dark-blue">{item?.ussdRequest?.message || "-"}</td>
                                             <td className="p-2 border border-dark-blue">
@@ -358,6 +396,24 @@ function Appointments({ setSelectedCard, setAppointmentId }) {
                                                 )}
                                             </td>
                                             <td className="p-2 border border-dark-blue">{item?.ussdRequest?.status || "-"}</td>
+                                            <td className="p-2 border border-dark-blue">
+                                                {
+                                                    item?.ussdRequest?.date && (
+                                                        new Date(item?.ussdRequest?.date).toLocaleDateString('en-US', {
+                                                            weekday: 'long',
+                                                            year: 'numeric',
+                                                            month: 'long',
+                                                            day: 'numeric',
+                                                        })
+
+                                                    )
+                                                } -- {' '}
+                                                {
+                                                    item?.ussdRequest?.time && (
+                                                        item?.ussdRequest?.time
+                                                    )
+                                                }
+                                            </td>
                                             <td className="p-2 border border-dark-blue">
                                                 {item?.ussdRequest?.status.toLowerCase() === 'accepted' ? (
                                                     <span className="btn2 py-1 px-1 bg-green-500 cursor-not-allowed">

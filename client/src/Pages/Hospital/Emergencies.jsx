@@ -27,6 +27,8 @@ function Emergencies({ setSelectedCard, setAppointmentId }) {
     const [marking, setMarking] = useState(false);
     const [ acceptingRequest, setAcceptingRequest ] = useState(false)
     const [rejectingRequest, setRejectingRequest] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
 
     const handleStatusFilter = (data) => {
         setStatusFilter(data || undefined);
@@ -58,6 +60,16 @@ function Emergencies({ setSelectedCard, setAppointmentId }) {
         setShowDateCalender(false);
     };
 
+    const handleSearch = () => {
+        setAppliedSearchTerm(searchTerm);
+        setPage(1);
+    }
+
+    const handleSearchClear = () => {
+        setAppliedSearchTerm();
+        setSearchTerm('')
+    }
+
     const queryString = useMemo(() => {
         const params = new URLSearchParams();
         params.append("page", page);
@@ -74,8 +86,14 @@ function Emergencies({ setSelectedCard, setAppointmentId }) {
             params.append("period", dateFilter);
         }
 
+        //serach term
+        if (appliedSearchTerm) {
+            params.append("search", appliedSearchTerm);
+        }
+
+
         return params.toString();
-    }, [page, readFilter, statusFilter, dateFilter, appliedStartDate, appliedEndDate]);
+    }, [page, readFilter, statusFilter, dateFilter, appliedStartDate, appliedEndDate, appliedSearchTerm]);
 
     const { data, isFetching } = useFetchNotification(`?${queryString}`);
     const totalPages = data?.data?.totalPages || 1;
@@ -229,6 +247,27 @@ function Emergencies({ setSelectedCard, setAppointmentId }) {
                         <h1 className="title">Emergency Ussd Notifications</h1>
 
                         <div className="flex justify-end my-4 gap-4">
+                            <div className="flex mr-auto">
+                                <input 
+                                    type="text" 
+                                    placeholder="Search by request Id" 
+                                    className="input p-0" 
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSearch();
+                                    }}
+                                />
+                                <div className="flex items-center gap-1.5">
+                                    <div className="btn2" onClick={handleSearch}>Search</div>
+                                    {
+                                        searchTerm && (
+                                            <div className="btn2" onClick={() => handleSearchClear()} >Clear</div>
+                                        )
+                                    }
+                                </div>
+                            </div>
+
                             <div className="flex gap-4">
                                 <button
                                     className={`py-2 px-2 rounded-[4px] cursor-pointer ${readFilter === 'all' ? 'bg-dark-blue text-white' : 'bg-white border-[1px] text-dark-blue'}`}

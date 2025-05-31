@@ -11,7 +11,16 @@ const allowedPeriods = ['today', '3days', '7days', '15days', '30days', 'allTime'
 
 export async function getAppointmentNotification(req, res) {
     const { hospitalId } = req.hospital;
-    const { limit = 10, page = 1, read, status, period, startDate, endDate } = req.query;
+    const {
+        limit = 10,
+        page = 1,
+        read,
+        status,
+        period,
+        startDate,
+        endDate,
+        search
+    } = req.query;
 
     if (read && read !== 'true' && read !== 'false') {
         return sendResponse(res, 400, false, null, 'Read must be a boolean value');
@@ -63,6 +72,32 @@ export async function getAppointmentNotification(req, res) {
             query.createdAt = dateFilter;
         }
 
+        let matchedUssdRequestIds = [];
+
+        // Handle search in AppointmentUssdRequestModel
+        if (search && search.trim() !== '') {
+            const regex = new RegExp(search.trim(), 'i');
+
+            const matchingAppointments = await AppointmentUssdRequestModel.find({
+                ussdRequestId: { $regex: regex }
+            }).select('ussdRequestId');
+
+            matchedUssdRequestIds = matchingAppointments.map(app => app.ussdRequestId);
+
+            // If no match found, return early
+            if (matchedUssdRequestIds.length === 0) {
+                return sendResponse(res, 200, true, {
+                    data: [],
+                    total: 0,
+                    totalPages: 0,
+                    currentPage: Number(page),
+                    limit: Number(limit)
+                }, 'No appointment notifications found');
+            }
+
+            query.ussdRequestId = { $in: matchedUssdRequestIds };
+        }
+
         // Step 1: Get all matching notifications
         const allNotifications = await UssdNotificationModel.find(query)
             .sort({ createdAt: -1 })
@@ -77,9 +112,8 @@ export async function getAppointmentNotification(req, res) {
                 { solved: { $ne: true } },
                 { attendedBy: hospitalId }
             ]
-        })
-            .select('ussdRequestId message city state issue day time date status solved attendedBy')
-            .lean();
+        }).select('ussdRequestId message city state issue day time date status solved attendedBy')
+          .lean();
 
         const ussdMap = {};
         validUssdRequests.forEach(req => {
